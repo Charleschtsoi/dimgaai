@@ -35,6 +35,7 @@ from dimgaai_cli.processes import (
     stop_all,
     wait_for_health,
 )
+from dimgaai_cli.bootstrap import ensure_app, download_app
 from dimgaai_cli.setup_wizard import run_setup_wizard
 
 app = typer.Typer(
@@ -43,6 +44,11 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
+
+
+def _require_app() -> None:
+    """Download app from GitHub when CLI was installed via pip (no git clone)."""
+    ensure_app()
 
 
 def _ensure_backend_deps() -> None:
@@ -188,10 +194,20 @@ def _start_app(open_browser: bool) -> None:
 
 
 @app.command()
+def bootstrap(
+    force: bool = typer.Option(False, "--force", help="Re-download app from GitHub"),
+):
+    """Download or update the dimgaai app (no git clone needed)."""
+    download_app(force=force)
+    console.print("\n[bold]Next:[/bold] [cyan]dimgaai go[/cyan]")
+
+
+@app.command()
 def init(
     force: bool = typer.Option(False, "--force", help="Overwrite existing .env"),
 ):
     """Create .env from template and install Python dependencies."""
+    _require_app()
     if ENV_FILE.exists() and not force:
         console.print(f"[green].env already exists[/green] ({ENV_FILE})")
     else:
@@ -207,6 +223,7 @@ def init(
 @app.command()
 def setup():
     """Interactive API key setup in the terminal (optional — browser BYOK is default)."""
+    _require_app()
     _ensure_backend_deps()
     run_setup_wizard(skip_if_configured=False)
     console.print("\n[bold]Next:[/bold] [cyan]dimgaai go[/cyan]")
@@ -217,6 +234,7 @@ def doctor(
     strict: bool = typer.Option(False, "--strict", help="Treat hints as failures"),
 ):
     """Check local prerequisites."""
+    _require_app()
     ok, blockers, hints = run_checks(strict=strict)
     _print_check_table(ok, blockers, hints)
     if blockers:
@@ -239,6 +257,7 @@ def go(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
 ):
     """One-command start: free ports, install deps, launch app (API keys in browser)."""
+    _require_app()
     console.print(Panel("[bold]dimgaai go[/bold] — starting in one flow…", title="dimgaai"))
 
     if not ENV_FILE.exists():
@@ -270,6 +289,7 @@ def dev(
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser"),
 ):
     """Start backend + Vite dev server (recommended for local use)."""
+    _require_app()
     _ensure_backend_deps()
     refresh_tool_paths()
     ok, blockers, hints = run_checks()
@@ -295,6 +315,7 @@ def start_cmd(
     open_browser: bool = typer.Option(True, "--open/--no-open"),
 ):
     """Build frontend and serve everything on http://localhost:8000."""
+    _require_app()
     _ensure_backend_deps()
     refresh_tool_paths()
     if rebuild or not FRONTEND_DIST.exists():
@@ -332,6 +353,7 @@ def stop():
 @app.command()
 def test():
     """Run automated demo checklist."""
+    _require_app()
     script = BACKEND / "scripts" / "demo_checklist.py"
     subprocess.run([sys.executable, str(script), "--dry-run"], cwd=str(ROOT), check=False)
 
@@ -341,6 +363,7 @@ def share(
     mode: str = typer.Option("dev", "--mode", "-m", help="dev (port 5173) or start (port 8000)"),
 ):
     """Start app and print a public HTTPS URL via Cloudflare Tunnel (if installed)."""
+    _require_app()
     cloudflared = shutil.which("cloudflared")
     if not cloudflared:
         console.print("[red]cloudflared not found.[/red]")
@@ -366,7 +389,7 @@ def share(
 @app.command()
 def version():
     """Show version."""
-    console.print("dimgaai CLI 0.4.0 (local phase 1)")
+    console.print("dimgaai CLI 0.5.0 (bootstrap + local phase 1)")
 
 
 def run() -> None:

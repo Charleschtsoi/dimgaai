@@ -9,37 +9,70 @@ Repo: https://github.com/Charleschtsoi/dimgaai
 
 ---
 
-## Start here (main command)
+## Easiest start (no git clone)
 
-**The easiest way to run dimgaai on Windows:**
+**Like Qwen CLI — one command installs everything. You only need Python 3.11+.**
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/Charleschtsoi/dimgaai/main/scripts/install.ps1 | iex
+```
+
+This will:
+
+1. Install the `dimgaai` CLI via pip (from GitHub — no manual clone)
+2. Download the full app to `%LOCALAPPDATA%\dimgaai\app`
+3. Download portable Node + ffmpeg (no admin)
+4. Build the UI (first run only)
+5. Open **http://localhost:8000** in your browser
+
+**Next time**, just run:
+
+```powershell
+dimgaai go
+```
+
+**Stop:**
+
+```powershell
+dimgaai stop
+```
+
+### Mac / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Charleschtsoi/dimgaai/main/scripts/install.sh | bash
+```
+
+App installs to `~/.local/share/dimgaai/app`. Then use `dimgaai go` anytime.
+
+### Alternative: pip only (no install script)
+
+```powershell
+pip install "git+https://github.com/Charleschtsoi/dimgaai.git#subdirectory=backend"
+dimgaai go
+```
+
+If `git` is not installed, use the `install.ps1` script above — it downloads a zip instead.
+
+---
+
+## Already have the repo? (developers)
 
 ```powershell
 cd "D:\path\to\meeting-support"
 .\scripts\dimgaai.ps1 go
 ```
 
-That single command does everything:
+Same as `dimgaai go` but finds Python for you. Works from repo root or `backend\`.
 
-1. Installs Python dependencies (first run)
-2. Downloads portable Node.js + ffmpeg into `.tools/` if needed (**no admin**)
-3. Builds the UI on first run (~2–5 min, needs internet once)
-4. Starts the server on **http://localhost:8000**
-5. Opens your browser automatically
-
-**Stop the app:**
+**Stop / status:**
 
 ```powershell
 .\scripts\dimgaai.ps1 stop
-```
-
-**Check status:**
-
-```powershell
 .\scripts\dimgaai.ps1 doctor
 ```
-
-> Works from the **repo root** or the `backend\` folder.  
-> Mac/Linux: `./scripts/dimgaai.sh go`
 
 ---
 
@@ -67,8 +100,10 @@ Gemini keys usually start with `AIza...`. See [Why two APIs?](#why-two-apis) if 
 ### 3. Run the app
 
 ```powershell
-.\scripts\dimgaai.ps1 go
+dimgaai go
 ```
+
+Or if you have the repo: `.\scripts\dimgaai.ps1 go`
 
 | Run | What happens | Time |
 |-----|----------------|------|
@@ -105,7 +140,7 @@ Drag PDFs into **「上傳參考文件」** before recording. Improves domain te
 ### 8. Next time
 
 ```powershell
-.\scripts\dimgaai.ps1 go
+dimgaai go
 ```
 
 Open http://localhost:8000 → keys are remembered in the browser session → record.
@@ -118,11 +153,12 @@ All commands use the PowerShell wrapper — **this is the recommended way to run
 
 | What you want | Command |
 |---------------|---------|
-| **Start app** (main) | `.\scripts\dimgaai.ps1 go` |
-| Stop app | `.\scripts\dimgaai.ps1 stop` |
-| Check status | `.\scripts\dimgaai.ps1 doctor` |
-| API keys in terminal (optional) | `.\scripts\dimgaai.ps1 setup` |
-| Run tests | `.\scripts\dimgaai.ps1 test` |
+| **First install (no clone)** | `irm .../install.ps1 \| iex` (Windows) |
+| **Start app** | `dimgaai go` or `.\scripts\dimgaai.ps1 go` |
+| Stop app | `dimgaai stop` or `.\scripts\dimgaai.ps1 stop` |
+| Check status | `dimgaai doctor` |
+| Re-download app | `dimgaai bootstrap --force` |
+| API keys in terminal (optional) | `dimgaai setup` |
 
 **Mac/Linux** — replace with `./scripts/dimgaai.sh <command>`.
 

@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 
+# Populated by resolve_root() / reconfigure_paths() / bootstrap.ensure_app()
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = ROOT / "backend"
 FRONTEND = ROOT / "frontend"
@@ -13,6 +14,31 @@ STATE_DIR = ROOT / ".dimgaai"
 STATE_FILE = STATE_DIR / "state.json"
 TOOLS_DIR = ROOT / ".tools"
 FRONTEND_DIST = FRONTEND / "dist"
+
+
+def reconfigure_paths(root: Path) -> None:
+    """Point all path constants at a project root (dev checkout or install dir)."""
+    global ROOT, BACKEND, FRONTEND, ENV_FILE, ENV_EXAMPLE
+    global STATE_DIR, STATE_FILE, TOOLS_DIR, FRONTEND_DIST
+
+    ROOT = root
+    BACKEND = ROOT / "backend"
+    FRONTEND = ROOT / "frontend"
+    ENV_FILE = ROOT / ".env"
+    ENV_EXAMPLE = ROOT / ".env.example"
+    STATE_DIR = ROOT / ".dimgaai"
+    STATE_FILE = STATE_DIR / "state.json"
+    TOOLS_DIR = ROOT / ".tools"
+    FRONTEND_DIST = FRONTEND / "dist"
+
+
+def _init_paths() -> None:
+    from dimgaai_cli.bootstrap import resolve_root
+
+    reconfigure_paths(resolve_root())
+
+
+_init_paths()
 
 
 def load_state() -> dict:
