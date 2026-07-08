@@ -9,34 +9,14 @@ Repo: https://github.com/Charleschtsoi/dimgaai
 
 ---
 
-## Easiest start (no git clone)
+## Quick start (recommended)
 
-**Like Qwen CLI — one command installs everything. You only need Python 3.11+.**
+**You only need Python 3.11+. No git clone, no Node install, no admin rights.**
 
-### Windows (PowerShell)
+### Windows — one command
 
 ```powershell
 irm https://raw.githubusercontent.com/Charleschtsoi/dimgaai/main/scripts/install.ps1 | iex
-```
-
-This will:
-
-1. Install the `dimgaai` CLI via pip (from GitHub — no manual clone)
-2. Download the full app to `%LOCALAPPDATA%\dimgaai\app`
-3. Download portable Node + ffmpeg (no admin)
-4. Build the UI (first run only)
-5. Open **http://localhost:8000** in your browser
-
-**Next time**, just run:
-
-```powershell
-dimgaai go
-```
-
-**Stop:**
-
-```powershell
-dimgaai stop
 ```
 
 ### Mac / Linux
@@ -45,134 +25,105 @@ dimgaai stop
 curl -fsSL https://raw.githubusercontent.com/Charleschtsoi/dimgaai/main/scripts/install.sh | bash
 ```
 
-App installs to `~/.local/share/dimgaai/app`. Then use `dimgaai go` anytime.
+The installer will:
 
-### Alternative: pip only (no install script)
+1. Install the `dimgaai` CLI
+2. Download the app from GitHub (no manual clone)
+3. Download portable Node + ffmpeg into `.tools/` (no admin)
+4. Build the UI on first run (~2–5 min)
+5. Open **http://localhost:8000**
+
+### Every day after that
 
 ```powershell
-pip install "git+https://github.com/Charleschtsoi/dimgaai.git#subdirectory=backend"
-dimgaai go
+dimgaai go       # start
+dimgaai stop     # stop
+dimgaai doctor   # check status
 ```
 
-If `git` is not installed, use the `install.ps1` script above — it downloads a zip instead.
+API keys are entered in the browser (**⚙️ API 設定**) — not in the terminal.
 
 ---
 
-## Already have the repo? (developers)
+## Alternative installs
 
-```powershell
-cd "D:\path\to\meeting-support"
-.\scripts\dimgaai.ps1 go
-```
+| Method | When to use |
+|--------|-------------|
+| **Installer script** (above) | **Recommended** — works without git |
+| `pip install git+https://github.com/Charleschtsoi/dimgaai.git#subdirectory=backend` then `dimgaai go` | If you prefer pip and have git |
+| Clone repo + `.\scripts\dimgaai.ps1 go` | Developers hacking on the code |
 
-Same as `dimgaai go` but finds Python for you. Works from repo root or `backend\`.
-
-**Stop / status:**
-
-```powershell
-.\scripts\dimgaai.ps1 stop
-.\scripts\dimgaai.ps1 doctor
-```
+> **Phase 2:** `pip install dimgaai` from PyPI (no git URL) — not available yet.
 
 ---
 
-## Full walkthrough (first time)
+## First-time walkthrough
 
-### 1. Prerequisites
+### What you need
 
-| You need | Required? |
-|----------|-----------|
-| **Python 3.11+** | Yes — [python.org](https://www.python.org/downloads/) |
-| **Node.js installed** | **No** — portable copy auto-downloaded |
-| **Admin rights** | **No** — ignore winget errors |
-| **2 API keys** | Yes — enter in browser after `go` opens |
-| **Microphone** | Yes — browser will ask when you record |
+| Item | Required? |
+|------|-----------|
+| Python 3.11+ | Yes — [python.org](https://www.python.org/downloads/) |
+| Git clone | **No** |
+| Node.js / ffmpeg install | **No** — auto-downloaded |
+| Admin rights | **No** |
+| 2 API keys | Yes — paste in browser |
+| Microphone | Yes |
 
-### 2. Get 2 API keys (before or after `go`)
+### Get 2 API keys
 
 | Key | Sign up | Purpose |
 |-----|---------|---------|
 | **Deepgram** | [console.deepgram.com](https://console.deepgram.com/) | Live Cantonese mic (`zh-HK`) |
 | **Google Gemini** *(recommended)* | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Analysis, fact-check, PDF search |
 
-Gemini keys usually start with `AIza...`. See [Why two APIs?](#why-two-apis) if you wonder why both are needed.
+Gemini keys usually start with `AIza...`.
 
-### 3. Run the app
+### In the browser
 
-```powershell
-dimgaai go
-```
-
-Or if you have the repo: `.\scripts\dimgaai.ps1 go`
-
-| Run | What happens | Time |
-|-----|----------------|------|
-| **First time** | Download tools + build UI + start | ~2–5 min |
-| **After that** | Start server + open browser | ~10 sec |
-
-If winget fails — **ignore it**. Portable tools install into `.tools/` without admin.
-
-### 4. Enter API keys in the browser
-
-`go` does **not** ask for keys in the terminal. In the browser:
-
-1. Tap **「開啟設定」** on the onboarding screen, or **⚙️ API 設定** in the top bar
-2. Keep **Google Gemini（推薦 — 2 把金鑰）** selected
-3. Paste **Deepgram** + **Gemini** keys
-4. Tap **「儲存」** — confirm **已設定 2/2**
-
-### 5. (Optional) Upload PDFs
-
-Drag PDFs into **「上傳參考文件」** before recording. Improves domain terms and fact-checking.
-
-### 6. Record a meeting
-
-1. Click **「🎙️ 開始錄音」**
-2. Allow microphone access
-3. Wait for green **「已連線」**
-4. Speak — transcript appears in **「即時轉錄」**
-
-### 7. Stop and export
-
-1. **「⏹ 停止錄音」**
-2. **「📥 匯出報告」** → Markdown or PDF
-
-### 8. Next time
-
-```powershell
-dimgaai go
-```
-
-Open http://localhost:8000 → keys are remembered in the browser session → record.
+1. **API 設定** → choose **Gemini** preset → paste both keys → **儲存** (confirm **2/2**)
+2. *(Optional)* Upload PDFs in **上傳參考文件**
+3. **開始錄音** → allow mic → wait for **已連線** → speak
+4. **停止錄音** → **匯出報告** (Markdown or PDF)
 
 ---
 
-## Command cheat sheet (Windows)
+## Command reference
 
-All commands use the PowerShell wrapper — **this is the recommended way to run dimgaai:**
+| Command | Description |
+|---------|-------------|
+| `dimgaai go` | Start app + open browser |
+| `dimgaai stop` | Stop server |
+| `dimgaai doctor` | Check prerequisites |
+| `dimgaai bootstrap --force` | Re-download app from GitHub |
+| `dimgaai setup` | API keys in terminal (optional) |
 
-| What you want | Command |
-|---------------|---------|
-| **First install (no clone)** | `irm .../install.ps1 \| iex` (Windows) |
-| **Start app** | `dimgaai go` or `.\scripts\dimgaai.ps1 go` |
-| Stop app | `dimgaai stop` or `.\scripts\dimgaai.ps1 stop` |
-| Check status | `dimgaai doctor` |
-| Re-download app | `dimgaai bootstrap --force` |
-| API keys in terminal (optional) | `dimgaai setup` |
+**From a git clone** — same commands via the wrapper:
 
-**Mac/Linux** — replace with `./scripts/dimgaai.sh <command>`.
+```powershell
+.\scripts\dimgaai.ps1 go
+.\scripts\dimgaai.ps1 stop
+```
 
-Advanced users can also run `python -m dimgaai_cli.main go` from `backend\`, but `.\scripts\dimgaai.ps1 go` is easier because it finds Python automatically.
+**Install locations**
+
+| Platform | App files | Portable tools |
+|----------|-----------|----------------|
+| Windows (pip install) | `%LOCALAPPDATA%\dimgaai\app` | `%LOCALAPPDATA%\dimgaai\app\.tools\` |
+| Mac/Linux | `~/.local/share/dimgaai/app` | `~/.local/share/dimgaai/app/.tools/` |
+| Git clone | Your repo folder | `<repo>\.tools\` |
 
 ---
 
 ## API keys
 
+**Default:** enter in browser after `dimgaai go` opens.
+
 | Method | How |
 |--------|-----|
-| **Browser (default)** | `.\scripts\dimgaai.ps1 go` → **API 設定** → paste keys → **儲存** |
-| CLI wizard (optional) | `.\scripts\dimgaai.ps1 setup` |
-| `.env` file | Copy `.env.example` → `.env` |
+| Browser | **API 設定** → paste keys → **儲存** |
+| Terminal | `dimgaai setup` |
+| File | Copy `.env.example` → `.env` in app folder |
 
 ```env
 DEEPGRAM_API_KEY=your_deepgram_key
@@ -181,48 +132,33 @@ GOOGLE_API_KEY=your_google_key
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 ```
 
-Never commit `.env` to git.
-
----
-
-## No admin rights?
-
-You do **not** need IT to install Node.js or ffmpeg.
-
-```powershell
-.\scripts\dimgaai.ps1 go
-```
-
-Portable tools land in `.tools/` inside the project folder. After the first build, only Python is needed.
-
-### Troubleshooting
-
-| Problem | Fix |
-|---------|-----|
-| `python` not found | Install Python 3.11+, or use full path: `%LOCALAPPDATA%\Programs\Python\Python312\python.exe` |
-| Port 8000 in use | `.\scripts\dimgaai.ps1 stop` then `.\scripts\dimgaai.ps1 go` |
-| Status stays **未連線** | **API 設定** → paste both keys → **儲存** → retry |
-| **已連線** but no text | Wait 3–5 sec; use headset; speak clearly |
-| PDF upload fails | Restart with `stop` + `go` (uses `gemini-embedding-001`) |
-| Export asks for keys again | Hard-refresh browser (Ctrl+Shift+R) after `go` |
-| Build failed | Delete `frontend\node_modules`, run `.\scripts\dimgaai.ps1 go` again |
+Never commit `.env`.
 
 ---
 
 ## Why two APIs?
 
-| Job | API | Why not one LLM? |
-|-----|-----|------------------|
-| **Live mic transcript** | Deepgram (`zh-HK`) | Streaming ASR + diarization |
-| **Analysis / fact-check** | Gemini, OpenAI, or Anthropic | Text reasoning |
+| Job | API |
+|-----|-----|
+| **Live mic transcript** | Deepgram (`zh-HK`) |
+| **Analysis / fact-check / questions** | Gemini *(recommended)*, OpenAI, or Anthropic |
 
-Claude has no speech-to-text. Gemini batch audio is not real-time.
+Claude cannot replace Deepgram for live mic. One Google key covers chat + PDF embeddings.
 
-| Stack | Keys |
-|-------|------|
-| **Gemini** *(recommended)* | Deepgram + Google |
-| OpenAI | Deepgram + OpenAI |
-| Anthropic | Deepgram + Anthropic + embedding key |
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `python` not found | Install Python 3.11+ |
+| `dimgaai` not found after install | Close and reopen terminal, or run `python -m dimgaai_cli go` |
+| Port 8000 in use | `dimgaai stop` then `dimgaai go` |
+| **未連線** when recording | **API 設定** → save both keys → retry |
+| No transcript after **已連線** | Wait 3–5 sec; use headset |
+| PDF upload error | `dimgaai bootstrap --force` then re-upload |
+| Export issues | Hard-refresh browser (Ctrl+Shift+R) |
+| winget errors | Ignore — portable tools are used instead |
 
 ---
 
@@ -234,67 +170,70 @@ Mic (webm/opus) → Deepgram nova-2 zh-HK
   → RAG fact-check (PDFs) → follow-up questions
 ```
 
-**Tips:** upload PDFs first, use a headset, speak in full phrases.
-
 ---
 
 ## Features
 
 - Live Cantonese transcription with speaker labels
 - PDF upload for glossary + fact-checking
-- TRUE / FALSE / UNCERTAIN verdicts with source quotes
-- Follow-up questions every ~30s or on claims
+- TRUE / FALSE / UNCERTAIN verdicts
+- Follow-up questions on claims or every ~30s
 - Export Markdown / PDF
-- Mobile-first PWA UI
-- Portable Node/ffmpeg — no admin install needed
+- Mobile-first PWA
+- No admin install (portable Node/ffmpeg)
+
+---
+
+## Phase 2 (planned)
+
+| Item | Status |
+|------|--------|
+| `pip install dimgaai` from **PyPI** | Planned |
+| Docker + `docker compose up` | Dockerfile in repo |
+| Public web deploy (Railway / VPS) | Planned |
+| Pre-built UI in release (skip first-time build) | Planned |
+
+Phase 1 (current): local CLI, BYOK, browser UI at localhost:8000.
 
 ---
 
 ## For developers
 
 <details>
+<summary>Clone and run</summary>
+
+```powershell
+git clone https://github.com/Charleschtsoi/dimgaai.git
+cd dimgaai
+.\scripts\dimgaai.ps1 go
+```
+
+</details>
+
+<details>
 <summary>All CLI commands</summary>
 
 | Command | Description |
 |---------|-------------|
-| `.\scripts\dimgaai.ps1 go` | **Start** — build + serve on port 8000 |
-| `.\scripts\dimgaai.ps1 stop` | Stop server + free ports |
-| `.\scripts\dimgaai.ps1 doctor` | Check prerequisites |
-| `.\scripts\dimgaai.ps1 setup` | Terminal API key wizard |
-| `.\scripts\dimgaai.ps1 init` | Create `.env` + pip install |
-| `.\scripts\dimgaai.ps1 dev` | Dev mode (port 5173) |
-| `.\scripts\dimgaai.ps1 test` | Automated checklist |
-| `.\scripts\dimgaai.ps1 share` | Public URL via Cloudflare Tunnel |
+| `go` | Build (if needed) + serve on :8000 |
+| `stop` | Stop server |
+| `doctor` | Check status |
+| `bootstrap` | Download/update app from GitHub |
+| `setup` | Terminal API wizard |
+| `dev` | Vite dev mode on :5173 |
+| `test` | Automated checklist |
+
+Prefix with `.\scripts\dimgaai.ps1` on Windows or `./scripts/dimgaai.sh` on Mac/Linux.
 
 </details>
 
 <details>
-<summary>Manual dev (without script)</summary>
+<summary>Manual dev</summary>
 
 ```powershell
-# Terminal 1
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
-
-# Terminal 2
-cd frontend
-npm install && npm run dev
+cd backend && python -m uvicorn app.main:app --reload --port 8000
+cd frontend && npm install && npm run dev   # :5173
 ```
-
-Open http://localhost:5173
-
-</details>
-
-<details>
-<summary>API endpoints</summary>
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| POST | `/session/{id}/configure` | BYOK keys |
-| POST | `/documents` | Upload PDFs |
-| GET | `/export/{id}?format=md\|pdf` | Export report |
-| WS | `/ws/meeting/{id}` | Audio + events |
 
 </details>
 
@@ -302,21 +241,19 @@ Open http://localhost:5173
 <summary>Project structure</summary>
 
 ```
-meeting-support/
-├── scripts/dimgaai.ps1   ← main entry point (Windows)
+dimgaai/
+├── scripts/
+│   ├── install.ps1       # one-line installer (Windows)
+│   ├── install.sh        # one-line installer (Mac/Linux)
+│   └── dimgaai.ps1       # wrapper when using git clone
 ├── backend/
 │   ├── app/              # FastAPI, WebSocket, ASR, RAG
-│   └── dimgaai_cli/      # CLI + portable tools
+│   └── dimgaai_cli/      # CLI, bootstrap, portable tools
 ├── frontend/             # React + Vite + Tailwind
-├── .tools/               # Portable Node + ffmpeg (auto-created)
-└── docker-compose.yml    # Phase 2 deploy
+└── docker-compose.yml    # Phase 2
 ```
 
 </details>
-
-## Phase 2 (planned)
-
-Docker + public web deploy — see `Dockerfile` and `docker-compose.yml`.
 
 ## License
 
