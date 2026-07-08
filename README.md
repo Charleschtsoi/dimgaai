@@ -228,6 +228,7 @@ You do **not** need IT to install Node.js or ffmpeg.
 | Build failed | Check internet, delete `frontend\node_modules`, run `go` again |
 | Keys deleted from `.env` | Re-enter in browser **API 設定** (no terminal prompt needed) |
 | Export opens API settings again | Fixed — export downloads in-place; refresh page after update if needed |
+| PDF upload embedding 404 | Update app — uses `gemini-embedding-001` (old `text-embedding-004` retired) |
 | Deepgram timeout error | Restart with `stop` then `go` — latest version sends WebM directly to Deepgram |
 
 ---
