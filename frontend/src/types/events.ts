@@ -9,6 +9,7 @@ export interface TranscriptEvent {
   is_final: boolean;
   timestamp_ms: number;
   is_factual_claim?: boolean;
+  utterance_key?: string;
 }
 
 export interface ClaimEvent {

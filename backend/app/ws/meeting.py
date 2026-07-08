@@ -5,7 +5,7 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -28,6 +28,25 @@ question_gen = QuestionGenerator()
 normalizer = TranscriptNormalizer()
 
 QUESTION_INTERVAL_MS = 30_000
+
+EmitFn = Callable[[dict[str, Any]], Awaitable[None]]
+
+
+def _utterance_key(segment: TranscriptSegment) -> str:
+    return f"{segment.speaker}-{segment.timestamp_ms}"
+
+
+def _transcript_payload(segment: TranscriptSegment, *, utterance_key: str) -> dict[str, Any]:
+    return {
+        "type": "transcript",
+        "speaker": segment.speaker,
+        "text": segment.text,
+        "raw_text": segment.raw_text,
+        "is_final": segment.is_final,
+        "timestamp_ms": segment.timestamp_ms,
+        "is_factual_claim": segment.is_factual_claim,
+        "utterance_key": utterance_key,
+    }
 
 
 async def _send_json(ws: WebSocket, payload: dict[str, Any]) -> None:
@@ -149,17 +168,42 @@ async def _process_utterance(
     ctx,
     raw_text: str,
     source_segment: TranscriptSegment,
-    emit,
+    emit: EmitFn,
 ) -> None:
-    history = [s for s in ctx.state.transcript if s.is_final]
-    normalized = await normalizer.normalize(ctx, raw_text, history)
+    """Emit raw ASR final immediately; enrich with LLM in background."""
+    text = raw_text.strip()
     segment = TranscriptSegment(
         speaker=source_segment.speaker,
-        text=normalized,
-        raw_text=raw_text,
+        text=text,
+        raw_text=text,
         is_final=True,
         timestamp_ms=source_segment.timestamp_ms,
     )
+    key = _utterance_key(segment)
+    ctx.state.transcript.append(segment)
+    await emit(_transcript_payload(segment, utterance_key=key))
+    asyncio.create_task(_enrich_utterance(ctx, segment, key, emit))
+
+
+async def _enrich_utterance(
+    ctx,
+    segment: TranscriptSegment,
+    utterance_key: str,
+    emit: EmitFn,
+) -> None:
+    history = [
+        s
+        for s in ctx.state.transcript
+        if s.is_final and _utterance_key(s) != utterance_key
+    ]
+
+    try:
+        normalized = await normalizer.normalize(ctx, segment.raw_text, history)
+        if normalized and normalized != segment.text:
+            segment.text = normalized
+            await emit(_transcript_payload(segment, utterance_key=utterance_key))
+    except Exception:
+        logger.exception("Transcript normalization failed")
 
     claim = None
     try:
@@ -182,19 +226,7 @@ async def _process_utterance(
                 "segment": segment.text,
             }
         )
-
-    ctx.state.transcript.append(segment)
-    await emit(
-        {
-            "type": "transcript",
-            "speaker": segment.speaker,
-            "text": segment.text,
-            "raw_text": segment.raw_text,
-            "is_final": True,
-            "timestamp_ms": segment.timestamp_ms,
-            "is_factual_claim": segment.is_factual_claim,
-        }
-    )
+        await emit(_transcript_payload(segment, utterance_key=utterance_key))
 
     history = [s for s in ctx.state.transcript if s.is_final]
     claim_detected = bool(claim and claim.is_claim and claim.claim_text)

@@ -129,6 +129,7 @@ Gemini keys usually start with `AIza...`.
 DEEPGRAM_API_KEY=your_deepgram_key
 LLM_PROVIDER=gemini
 GOOGLE_API_KEY=your_google_key
+GEMINI_MODEL=gemini-2.5-flash
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 ```
 
@@ -157,6 +158,8 @@ Claude cannot replace Deepgram for live mic. One Google key covers chat + PDF em
 | **未連線** when recording | **API 設定** → save both keys → retry |
 | No transcript after **已連線** | Wait 3–5 sec; use headset |
 | PDF upload error | `dimgaai bootstrap --force` then re-upload |
+| Gemini 404 / `gemini-2.0-flash` retired | Set `GEMINI_MODEL=gemini-2.5-flash` in `.env`, or `dimgaai bootstrap --force` |
+| Transcript feels slow | Raw text shows first; normalized text updates in place after ~1s |
 | Export issues | Hard-refresh browser (Ctrl+Shift+R) |
 | winget errors | Ignore — portable tools are used instead |
 

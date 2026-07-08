@@ -46,7 +46,7 @@ class DeepgramStream:
                 "punctuate": True,
                 "interim_results": True,
                 "smart_format": True,
-                "utterance_end_ms": 1200,
+                "utterance_end_ms": 800,
             }
             # Browser MediaRecorder sends containerized webm/opus — omit encoding
             # so Deepgram reads sample rate from the container header.

@@ -107,6 +107,11 @@ def run_checks(*, strict: bool = False) -> tuple[list[str], list[str], list[str]
             ok.append(f"Recording keys: {key_done}/{key_total} ({provider})")
         elif key_done > 0:
             recording_hints.append(f"Recording keys: {key_done}/{key_total} configured")
+        gemini_model = env.get("GEMINI_MODEL", "gemini-2.5-flash")
+        if provider == "gemini" and "gemini-2.0-flash" in gemini_model:
+            recording_hints.append(
+                "GEMINI_MODEL=gemini-2.0-flash is retired - set GEMINI_MODEL=gemini-2.5-flash in .env"
+            )
     else:
         recording_hints.append("No .env yet - dimgaai go will create one")
 

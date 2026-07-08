@@ -68,17 +68,15 @@ export default function App() {
     if (event.type === "transcript") {
       setLines((prev) => {
         const interimIdx = prev.findIndex((l) => !l.isFinal);
-        const entry: TranscriptLine = {
-          id: event.is_final
-            ? `final-${prev.length}-${Date.now()}`
-            : "interim",
-          speaker: event.speaker,
-          text: event.text,
-          rawText: event.raw_text,
-          isFinal: event.is_final,
-          isFactualClaim: Boolean(event.is_factual_claim),
-        };
         if (!event.is_final) {
+          const entry: TranscriptLine = {
+            id: "interim",
+            speaker: event.speaker,
+            text: event.text,
+            rawText: event.raw_text,
+            isFinal: false,
+            isFactualClaim: Boolean(event.is_factual_claim),
+          };
           if (interimIdx >= 0) {
             const next = [...prev];
             next[interimIdx] = entry;
@@ -87,6 +85,27 @@ export default function App() {
           return [...prev, entry];
         }
         const withoutInterim = prev.filter((l) => l.isFinal);
+        const lineId =
+          event.utterance_key ?? `final-${prev.length}-${Date.now()}`;
+        const entry: TranscriptLine = {
+          id: lineId,
+          speaker: event.speaker,
+          text: event.text,
+          rawText: event.raw_text,
+          isFinal: true,
+          isFactualClaim: Boolean(event.is_factual_claim),
+        };
+        if (event.utterance_key) {
+          const existingIdx = withoutInterim.findIndex(
+            (l) => l.id === event.utterance_key,
+          );
+          if (existingIdx >= 0) {
+            const next = [...withoutInterim];
+            next[existingIdx] = entry;
+            return next;
+          }
+          return [...withoutInterim, entry];
+        }
         const existingIdx = withoutInterim.findIndex(
           (l) => l.speaker === entry.speaker && l.text === entry.text,
         );

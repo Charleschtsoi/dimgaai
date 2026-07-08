@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 class SegmentBatcher:
     """Accumulate interim ASR text; flush on final or speaker change after silence."""
 
-    silence_gap_ms: int = 1500
+    silence_gap_ms: int = 1000
     _speaker: int = 0
     _parts: list[str] = field(default_factory=list)
     _last_update: float = field(default_factory=time.monotonic)
