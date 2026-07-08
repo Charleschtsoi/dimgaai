@@ -92,7 +92,8 @@ Gemini keys usually start with `AIza...`.
 
 | Command | Description |
 |---------|-------------|
-| `dimgaai go` | Start app + open browser |
+| `dimgaai go` | Start app + open browser (checks GitHub for updates) |
+| `dimgaai go --skip-updates` | Start without checking for updates |
 | `dimgaai stop` | Stop server |
 | `dimgaai doctor` | Check prerequisites |
 | `dimgaai bootstrap --force` | Re-download app from GitHub |
@@ -158,7 +159,7 @@ Claude cannot replace Deepgram for live mic. One Google key covers chat + PDF em
 | **未連線** when recording | **API 設定** → save both keys → retry |
 | No transcript after **已連線** | Wait 3–5 sec; use headset |
 | PDF upload error | `dimgaai bootstrap --force` then re-upload |
-| Gemini 404 / `gemini-2.0-flash` retired | Set `GEMINI_MODEL=gemini-2.5-flash` in `.env`, or `dimgaai bootstrap --force` |
+| Gemini 404 / `gemini-2.0-flash` retired | Set `GEMINI_MODEL=gemini-2.5-flash` in `.env`, or accept update when `dimgaai go` prompts |
 | Transcript feels slow | Raw text shows first; normalized text updates in place after ~1s |
 | Export issues | Hard-refresh browser (Ctrl+Shift+R) |
 | winget errors | Ignore — portable tools are used instead |

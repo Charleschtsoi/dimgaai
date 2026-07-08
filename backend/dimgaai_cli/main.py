@@ -35,7 +35,7 @@ from dimgaai_cli.processes import (
     stop_all,
     wait_for_health,
 )
-from dimgaai_cli.bootstrap import ensure_app, download_app
+from dimgaai_cli.bootstrap import ensure_app, download_app, maybe_check_and_apply_updates
 from dimgaai_cli.setup_wizard import run_setup_wizard
 
 app = typer.Typer(
@@ -255,10 +255,19 @@ def go(
         help="Try winget install for Node.js + ffmpeg on Windows",
     ),
     open_browser: bool = typer.Option(True, "--open/--no-open"),
+    check_updates: bool = typer.Option(
+        True,
+        "--check-updates/--skip-updates",
+        help="Check GitHub for a newer version before starting",
+    ),
 ):
     """One-command start: free ports, install deps, launch app (API keys in browser)."""
     _require_app()
     console.print(Panel("[bold]dimgaai go[/bold] — starting in one flow…", title="dimgaai"))
+
+    if check_updates:
+        if maybe_check_and_apply_updates():
+            _ensure_backend_deps()
 
     if not ENV_FILE.exists():
         if ENV_EXAMPLE.exists():
