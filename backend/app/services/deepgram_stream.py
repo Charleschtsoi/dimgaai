@@ -19,9 +19,11 @@ class DeepgramStream:
         self,
         api_key: str,
         on_transcript: Callable[[TranscriptSegment], Awaitable[None]],
+        keywords: list[str] | None = None,
     ) -> None:
         self.api_key = api_key
         self.on_transcript = on_transcript
+        self.keywords = keywords or []
         self._client = AsyncDeepgramClient(api_key=api_key)
         self._audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
         self._ready = asyncio.Event()
@@ -34,17 +36,22 @@ class DeepgramStream:
 
     async def _run(self) -> None:
         try:
-            async with self._client.listen.v1.connect(
-                model="nova-2",
-                language="zh-HK",
-                diarize=True,
-                punctuate=True,
-                interim_results=True,
-                smart_format=True,
-                encoding="linear16",
-                sample_rate=16000,
-                channels=1,
-            ) as connection:
+            connect_kwargs: dict = {
+                "model": "nova-2",
+                "language": "zh-HK",
+                "diarize": True,
+                "punctuate": True,
+                "interim_results": True,
+                "smart_format": True,
+                "encoding": "linear16",
+                "sample_rate": 16000,
+                "channels": 1,
+                "utterance_end_ms": 1200,
+            }
+            if self.keywords:
+                connect_kwargs["keywords"] = [f"{term}:2" for term in self.keywords[:50]]
+
+            async with self._client.listen.v1.connect(**connect_kwargs) as connection:
                 self._ready.set()
                 receiver = asyncio.create_task(self._receive(connection))
                 sender = asyncio.create_task(self._send_loop(connection))

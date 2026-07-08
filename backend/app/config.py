@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    static_dir: str = "./static"
     host: str = "0.0.0.0"
     port: int = 8000
 
@@ -31,6 +32,9 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if raw == "*":
+            return ["*"]
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property

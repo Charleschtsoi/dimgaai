@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.documents import router as documents_router
 from app.api.export import router as export_router
@@ -19,13 +21,13 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     settings.chroma_path.mkdir(parents=True, exist_ok=True)
     settings.upload_path.mkdir(parents=True, exist_ok=True)
-    logger.info("Meeting Support backend started")
+    logger.info("dimgaai backend started")
     yield
 
 
 app = FastAPI(
-    title="Cantonese Meeting Support Agent",
-    version="0.1.0",
+    title="dimgaai — Cantonese Meeting Support Agent",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -47,3 +49,9 @@ app.include_router(ws_router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+static_dir = Path(settings.static_dir)
+if static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    logger.info("Serving frontend from %s", static_dir)

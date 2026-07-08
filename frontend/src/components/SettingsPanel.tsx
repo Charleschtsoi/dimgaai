@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SessionConfig } from "../types/events";
 
 interface SettingsPanelProps {
@@ -7,6 +7,8 @@ interface SettingsPanelProps {
   onSave: () => Promise<void>;
   saving: boolean;
   error: string | null;
+  forceOpen?: boolean;
+  onClose?: () => void;
 }
 
 export function SettingsPanel({
@@ -15,8 +17,19 @@ export function SettingsPanel({
   onSave,
   saving,
   error,
+  forceOpen = false,
+  onClose,
 }: SettingsPanelProps) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
+
+  const close = () => {
+    setOpen(false);
+    onClose?.();
+  };
 
   const update = (patch: Partial<SessionConfig>) => {
     onChange({ ...config, ...patch });
@@ -27,15 +40,15 @@ export function SettingsPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+        className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-700 hover:bg-slate-50"
       >
-        API 設定 (BYOK)
+        ⚙️ API 設定
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-            <h3 className="mb-1 text-lg font-semibold">Bring Your Own Key</h3>
+            <h3 className="mb-1 text-lg font-semibold">API 設定 (BYOK)</h3>
             <p className="mb-4 text-xs text-slate-500">
               金鑰只會用於此工作階段，不會儲存到伺服器。
             </p>
@@ -47,7 +60,7 @@ export function SettingsPanel({
                   type="password"
                   value={config.deepgram_api_key || ""}
                   onChange={(e) => update({ deepgram_api_key: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   placeholder="Deepgram key"
                 />
               </label>
@@ -59,7 +72,7 @@ export function SettingsPanel({
                   onChange={(e) =>
                     update({ llm_provider: e.target.value as "openai" | "anthropic" })
                   }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="openai">OpenAI</option>
                   <option value="anthropic">Anthropic</option>
@@ -74,7 +87,7 @@ export function SettingsPanel({
                   type="password"
                   value={config.llm_api_key || ""}
                   onChange={(e) => update({ llm_api_key: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </label>
 
@@ -87,7 +100,7 @@ export function SettingsPanel({
                     type="password"
                     value={config.openai_api_key || ""}
                     onChange={(e) => update({ openai_api_key: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                     placeholder="Required for RAG embeddings"
                   />
                 </label>
@@ -99,7 +112,7 @@ export function SettingsPanel({
                   type="password"
                   value={config.tavily_api_key || ""}
                   onChange={(e) => update({ tavily_api_key: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -109,8 +122,8 @@ export function SettingsPanel({
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
+                onClick={close}
+                className="min-h-11 rounded-lg px-4 text-sm text-slate-600 hover:bg-slate-100"
               >
                 取消
               </button>
@@ -118,10 +131,14 @@ export function SettingsPanel({
                 type="button"
                 disabled={saving}
                 onClick={async () => {
-                  await onSave();
-                  setOpen(false);
+                  try {
+                    await onSave();
+                    close();
+                  } catch {
+                    // keep open on error
+                  }
                 }}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="min-h-11 rounded-lg bg-teal-600 px-4 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
               >
                 {saving ? "儲存中…" : "儲存"}
               </button>

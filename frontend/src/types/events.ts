@@ -1,11 +1,21 @@
 export type VerdictType = "TRUE" | "FALSE" | "UNCERTAIN";
+export type ClaimClassification = "factual_claim" | "non_claim";
 
 export interface TranscriptEvent {
   type: "transcript";
   speaker: number;
   text: string;
+  raw_text?: string;
   is_final: boolean;
   timestamp_ms: number;
+  is_factual_claim?: boolean;
+}
+
+export interface ClaimEvent {
+  type: "claim";
+  classification: ClaimClassification;
+  claim_text: string | null;
+  segment: string;
 }
 
 export interface VerdictEvent {
@@ -14,6 +24,7 @@ export interface VerdictEvent {
   verdict: VerdictType;
   confidence: number;
   rationale: string;
+  source_quote?: string;
   sources: Array<{
     text: string;
     filename: string;
@@ -42,6 +53,7 @@ export interface ErrorEvent {
 
 export type ServerEvent =
   | TranscriptEvent
+  | ClaimEvent
   | VerdictEvent
   | QuestionsEvent
   | StatusEvent
@@ -51,7 +63,9 @@ export interface TranscriptLine {
   id: string;
   speaker: number;
   text: string;
+  rawText?: string;
   isFinal: boolean;
+  isFactualClaim: boolean;
 }
 
 export interface SessionConfig {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -15,6 +16,7 @@ from app.config import get_settings
 from app.models.events import SourcePassage, Verdict, VerdictResult
 from app.models.session_store import SessionContext
 from app.services.llm_provider import get_chat_model, get_embeddings
+from app.services.meeting_glossary import extract_glossary_terms, merge_glossary
 from app.services.web_search import WebSearchService
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,7 @@ class RAGFactChecker:
         )
 
         total_chunks = 0
+        all_texts: list[str] = []
         for filename, path in files:
             loader = PyPDFLoader(str(path))
             docs = loader.load()
@@ -58,6 +61,7 @@ class RAGFactChecker:
                 continue
 
             texts = [c.page_content for c in chunks]
+            all_texts.extend(texts)
             vectors = await embeddings.aembed_documents(texts)
 
             ids = []
@@ -79,11 +83,36 @@ class RAGFactChecker:
             )
             total_chunks += len(chunks)
 
+        if all_texts:
+            ctx.glossary = merge_glossary(
+                ctx.glossary,
+                extract_glossary_terms(all_texts),
+            )
+
         ctx.state.document_count = len(files)
         return total_chunks
 
     async def verify(self, ctx: SessionContext, claim_text: str) -> VerdictResult:
         started = time.perf_counter()
+        try:
+            return await asyncio.wait_for(
+                self._verify_inner(ctx, claim_text, started),
+                timeout=4.5,
+            )
+        except asyncio.TimeoutError:
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            return VerdictResult(
+                claim=claim_text,
+                verdict=Verdict.UNCERTAIN,
+                confidence=0.0,
+                rationale="核查逾時，無法在時限內完成。",
+                source_quote="",
+                latency_ms=latency_ms,
+            )
+
+    async def _verify_inner(
+        self, ctx: SessionContext, claim_text: str, started: float
+    ) -> VerdictResult:
         passages = await self._retrieve(ctx, claim_text)
         used_web = False
 
@@ -104,6 +133,7 @@ class RAGFactChecker:
             verdict=Verdict(verdict_data.get("verdict", "UNCERTAIN")),
             confidence=float(verdict_data.get("confidence", 0.0)),
             rationale=verdict_data.get("rationale", ""),
+            source_quote=verdict_data.get("source_quote", ""),
             sources=passages[:4],
             latency_ms=latency_ms,
             used_web_search=used_web,

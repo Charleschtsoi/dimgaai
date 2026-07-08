@@ -14,11 +14,13 @@ env/
 # Data
 data/
 *.db
+.dimgaai/state.json
 
 # Build
 frontend/dist/
 dist/
 build/
+*.egg-info/
 
 # IDE
 .idea/

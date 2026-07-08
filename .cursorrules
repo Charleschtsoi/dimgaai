@@ -1,0 +1,36 @@
+# dimgaai — Cantonese Meeting Support Agent
+# Cursor rules for ongoing development
+
+## Context
+Real-time Cantonese meeting assistant for non-tech HK office workers.
+Repo: https://github.com/Charleschtsoi/dimgaai
+
+## Stack (do NOT change without asking)
+- Backend: FastAPI, Deepgram (zh-HK), LangChain, Chroma
+- Frontend: React, Vite, TypeScript, Tailwind CSS
+- LLM: OpenAI or Anthropic (BYOK)
+- Optional: Tavily web search fallback
+
+## Constraints
+- All user-facing text in Traditional Chinese (繁體中文)
+- No hardcoded API keys — BYOK modal or .env only
+- No localStorage / sessionStorage (iframe sandbox limitation)
+- Tailwind only — no arbitrary values like w-[800px]
+- Keep bundle size reasonable
+- Commit messages in English, prefixed: [backend], [frontend], [infra]
+
+## Iteration order
+1. **Phase 1 (current):** Local CLI (`dimgaai init`, `doctor`, `dev`, `start`, `stop`)
+2. Pipeline (ASR -> claims -> RAG -> questions)
+3. UI (mobile-first two-panel layout)
+4. Export
+5. **Phase 2:** Docker + public web deploy (Railway/Northflank)
+6. PWA polish
+
+## Acceptance criteria (before PR)
+- `dimgaai init && dimgaai doctor && dimgaai dev` works locally
+- `dimgaai test` (demo_checklist --dry-run) passes
+- 2-min Cantonese demo with verdict + question
+- Verdict <5s after claim
+- Code-mix sentences do not crash
+- Phase 2: `docker compose up --build` works

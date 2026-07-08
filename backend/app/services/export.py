@@ -5,12 +5,22 @@ from datetime import datetime, timezone
 from app.models.events import MeetingState
 
 
+def _format_duration(seconds: int) -> str:
+    minutes, secs = divmod(seconds, 60)
+    if minutes:
+        return f"{minutes} 分 {secs} 秒"
+    return f"{secs} 秒"
+
+
 def render_markdown(state: MeetingState) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         f"# 會議摘要 — {state.session_id}",
         "",
         f"**匯出時間:** {now}",
+        f"**會議時長:** {_format_duration(state.duration_seconds)}",
+        f"**參與人數:** {state.participant_count}",
+        f"**核查陳述數:** {state.claims_checked}",
         f"**參考文件數:** {state.document_count}",
         "",
         "## 完整轉錄",
@@ -20,7 +30,10 @@ def render_markdown(state: MeetingState) -> str:
     for seg in state.transcript:
         if not seg.is_final:
             continue
-        lines.append(f"**Speaker {seg.speaker}:** {seg.text}")
+        claim_mark = " [事實陳述]" if seg.is_factual_claim else ""
+        lines.append(f"**Speaker {seg.speaker}:** {seg.text}{claim_mark}")
+        if seg.raw_text and seg.raw_text != seg.text:
+            lines.append(f"  _（原文：{seg.raw_text}）_")
         lines.append("")
 
     lines.extend(["## 事實核查", ""])
@@ -30,7 +43,11 @@ def render_markdown(state: MeetingState) -> str:
         lines.append("| 陳述 | 判定 | 信心 | 來源 |")
         lines.append("| --- | --- | --- | --- |")
         for v in state.verdicts:
-            source = v.sources[0].text[:80] + "..." if v.sources else "—"
+            source = (
+                (v.source_quote or (v.sources[0].text[:80] + "..."))
+                if v.sources or v.source_quote
+                else "—"
+            )
             lines.append(
                 f"| {v.claim} | {v.verdict.value} | {v.confidence:.0%} | {source} |"
             )
@@ -39,7 +56,9 @@ def render_markdown(state: MeetingState) -> str:
             lines.append(f"### {v.claim}")
             lines.append(f"- **判定:** {v.verdict.value}")
             lines.append(f"- **說明:** {v.rationale}")
-            if v.sources:
+            if v.source_quote:
+                lines.append(f"- **引用:** {v.source_quote}")
+            elif v.sources:
                 lines.append(f"- **來源:** {v.sources[0].text[:200]}")
             lines.append("")
 

@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { ExportButton } from "./components/ExportButton";
-import { MicControls } from "./components/MicControls";
+import { OnboardingOverlay } from "./components/OnboardingOverlay";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { TopBar } from "./components/TopBar";
 import { TranscriptPanel } from "./components/TranscriptPanel";
 import { VerdictSidebar } from "./components/VerdictSidebar";
 import { useAudioCapture } from "./hooks/useAudioCapture";
@@ -21,12 +22,19 @@ function createSessionId() {
 
 export default function App() {
   const [sessionId] = useState(createSessionId);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialSeen, setTutorialSeen] = useState(false);
+  const [engagementCount, setEngagementCount] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+
   const [config, setConfig] = useState<SessionConfig>({
     llm_provider: "openai",
   });
   const [configError, setConfigError] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
   const [docCount, setDocCount] = useState(0);
+  const [checking, setChecking] = useState(false);
 
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [verdicts, setVerdicts] = useState<VerdictEvent[]>([]);
@@ -42,7 +50,9 @@ export default function App() {
             : "interim",
           speaker: event.speaker,
           text: event.text,
+          rawText: event.raw_text,
           isFinal: event.is_final,
+          isFactualClaim: Boolean(event.is_factual_claim),
         };
         if (!event.is_final) {
           if (interimIdx >= 0) {
@@ -53,12 +63,31 @@ export default function App() {
           return [...prev, entry];
         }
         const withoutInterim = prev.filter((l) => l.isFinal);
+        const existingIdx = withoutInterim.findIndex(
+          (l) => l.speaker === entry.speaker && l.text === entry.text,
+        );
+        if (existingIdx >= 0) {
+          const next = [...withoutInterim];
+          next[existingIdx] = entry;
+          return next;
+        }
         return [...withoutInterim, entry];
       });
+    } else if (event.type === "claim") {
+      setLines((prev) =>
+        prev.map((l) =>
+          l.isFinal && l.text === event.segment
+            ? { ...l, isFactualClaim: event.classification === "factual_claim" }
+            : l,
+        ),
+      );
     } else if (event.type === "verdict") {
+      setChecking(false);
       setVerdicts((prev) => [...prev, event]);
     } else if (event.type === "questions") {
       setQuestions((prev) => [...prev, event]);
+    } else if (event.type === "status" && event.message === "checking") {
+      setChecking(true);
     }
   }, []);
 
@@ -116,44 +145,87 @@ export default function App() {
   const handleStop = () => {
     stop();
     disconnect();
+    setChecking(false);
+    setEngagementCount((c) => {
+      const next = c + 1;
+      if (next >= 2) setShowInstallPrompt(true);
+      return next;
+    });
+  };
+
+  const handleToggleRecording = () => {
+    if (isRecording) handleStop();
+    else handleStart();
   };
 
   const headerNote = useMemo(
-    () => (docCount > 0 ? `${docCount} 份參考文件已索引` : "請先上傳參考 PDF"),
+    () => (docCount > 0 ? `${docCount} 份參考文件已索引` : "可選：上傳參考 PDF 以啟用核查"),
     [docCount],
   );
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col gap-4 p-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">粵語會議支援 Agent</h1>
-          <p className="text-xs text-slate-500">{headerNote}</p>
+    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 overflow-x-hidden p-4">
+      {!tutorialSeen && (
+        <OnboardingOverlay
+          step={tutorialStep}
+          onNext={() => setTutorialStep((s) => s + 1)}
+          onSkip={() => setTutorialSeen(true)}
+          onOpenSettings={() => {
+            setSettingsOpen(true);
+            setTutorialStep(1);
+          }}
+        />
+      )}
+
+      {showInstallPrompt && tutorialSeen && (
+        <div className="flex items-center justify-between rounded-lg bg-teal-50 px-4 py-3 text-sm text-teal-900">
+          <span>可將 dimgaai 加入主畫面，方便下次使用。</span>
+          <button
+            type="button"
+            onClick={() => setShowInstallPrompt(false)}
+            className="min-h-11 rounded-lg px-3 text-teal-700 hover:bg-teal-100"
+          >
+            知道了
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SettingsPanel
-            config={config}
-            onChange={setConfig}
-            onSave={saveConfig}
-            saving={savingConfig}
-            error={configError}
-          />
-          <DocumentUpload sessionId={sessionId} onUploaded={setDocCount} />
-          <ExportButton sessionId={sessionId} />
+      )}
+
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">dimgaai 點解</h1>
+            <p className="text-xs text-slate-500">{headerNote}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SettingsPanel
+              config={config}
+              onChange={setConfig}
+              onSave={saveConfig}
+              saving={savingConfig}
+              error={configError}
+              forceOpen={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+            />
+            <ExportButton sessionId={sessionId} />
+          </div>
         </div>
+        <DocumentUpload sessionId={sessionId} onUploaded={setDocCount} />
       </header>
 
-      <MicControls
+      <TopBar
         status={status}
         isRecording={isRecording}
-        onStart={handleStart}
-        onStop={handleStop}
+        onToggleRecording={handleToggleRecording}
         error={error || micError}
       />
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_380px] lg:gap-4">
+      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,24rem)]">
         <TranscriptPanel lines={lines} />
-        <VerdictSidebar verdicts={verdicts} questions={questions} />
+        <VerdictSidebar
+          verdicts={verdicts}
+          questions={questions}
+          checking={checking}
+        />
       </main>
     </div>
   );

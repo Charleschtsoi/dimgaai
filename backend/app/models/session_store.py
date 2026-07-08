@@ -11,6 +11,8 @@ class SessionContext:
     session_id: str
     config: SessionConfig = field(default_factory=SessionConfig)
     state: MeetingState = field(default_factory=lambda: MeetingState(session_id=""))
+    last_question_monotonic: float = 0.0
+    glossary: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.state.session_id = self.session_id

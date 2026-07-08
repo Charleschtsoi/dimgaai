@@ -12,6 +12,14 @@ from app.services.llm_provider import get_chat_model
 
 logger = logging.getLogger(__name__)
 
+SYSTEM_PROMPT = (
+    "你是一位香港會議助手。根據以下會議內容，提出 1-2 條跟進問題。"
+    "用繁體中文回答。"
+    "問題應針對：推理漏洞、未證實假設、缺失數據、矛盾之處。"
+    "若提供事實核查結果，可針對不確定或錯誤之處追問。"
+    'Return ONLY JSON: {"questions": ["問題一", "問題二"]}'
+)
+
 
 class QuestionGenerator:
     async def generate(
@@ -21,32 +29,36 @@ class QuestionGenerator:
         history: list[TranscriptSegment],
         verdict: VerdictResult | None = None,
     ) -> QuestionResult:
-        recent = history[-3:]
-        context_lines = [
-            f"Speaker {s.speaker}: {s.text}" for s in recent if s.is_final
-        ]
+        recent = history[-5:]
+        context_lines = []
+        for s in recent:
+            if not s.is_final:
+                continue
+            line = f"Speaker {s.speaker}: {s.text}"
+            if s.raw_text and s.raw_text != s.text:
+                line += f" (ASR: {s.raw_text})"
+            context_lines.append(line)
         verdict_line = ""
         if verdict:
             verdict_line = (
-                f"\nFact-check: {verdict.verdict.value} — {verdict.rationale}"
+                f"\nFact-check ({verdict.verdict.value}, "
+                f"confidence {verdict.confidence:.0%}): {verdict.rationale}"
             )
-
-        system = """Generate 1-2 concise follow-up questions for a meeting assistant.
-Write questions in Traditional Chinese (香港繁體).
-Return ONLY JSON: {"questions": ["question1", "question2?"]}
-Questions should clarify ambiguity, probe evidence, or deepen discussion."""
+            if verdict.source_quote:
+                verdict_line += f"\nSource: {verdict.source_quote}"
 
         user = (
             f"Recent transcript:\n"
             + "\n".join(context_lines)
             + f"\n\nCurrent segment (Speaker {segment.speaker}): {segment.text}"
+            + (f"\nASR raw: {segment.raw_text}" if segment.raw_text else "")
             + verdict_line
         )
 
         try:
             llm = get_chat_model(ctx)
             response = await llm.ainvoke(
-                [SystemMessage(content=system), HumanMessage(content=user)]
+                [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=user)]
             )
             content = response.content
             if isinstance(content, list):

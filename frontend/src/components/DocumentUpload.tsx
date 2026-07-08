@@ -9,6 +9,7 @@ export function DocumentUpload({ sessionId, onUploaded }: DocumentUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -25,7 +26,7 @@ export function DocumentUpload({ sessionId, onUploaded }: DocumentUploadProps) {
       const res = await fetch("/documents", { method: "POST", body: form });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Upload failed");
+        throw new Error(err.detail || "上傳失敗");
       }
       const data = await res.json();
       setMessage(`已索引 ${data.documents} 份文件 (${data.chunks_indexed} 段)`);
@@ -39,7 +40,21 @@ export function DocumentUpload({ sessionId, onUploaded }: DocumentUploadProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className={`min-h-11 rounded-lg border-2 border-dashed px-3 py-2 transition-colors ${
+        dragOver ? "border-teal-500 bg-teal-50" : "border-slate-300 bg-white"
+      }`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        handleUpload(e.dataTransfer.files);
+      }}
+    >
       <input
         ref={inputRef}
         type="file"
@@ -52,11 +67,11 @@ export function DocumentUpload({ sessionId, onUploaded }: DocumentUploadProps) {
         type="button"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        className="min-h-11 w-full rounded-lg text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
       >
-        {uploading ? "上傳中…" : "上傳參考 PDF"}
+        {uploading ? "上傳中…" : "📄 上傳參考文件（拖放 PDF）"}
       </button>
-      {message && <span className="text-xs text-slate-500">{message}</span>}
+      {message && <p className="mt-1 text-xs text-slate-500">{message}</p>}
     </div>
   );
 }

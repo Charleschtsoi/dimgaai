@@ -1,52 +1,140 @@
-# Cantonese Meeting Support Agent
+# dimgaai 點解
 
-Real-time Cantonese meeting assistant with live transcription, claim detection, RAG fact-checking, and Traditional Chinese follow-up questions.
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Stack
+Real-time Cantonese meeting assistant: live transcription, fact-check verdicts, and follow-up questions.
 
-- **Backend:** FastAPI, Deepgram (zh-HK), LangChain, Chroma
-- **Frontend:** React, Vite, TypeScript, Tailwind CSS
-- **LLM:** OpenAI or Anthropic (BYOK)
+Repo: https://github.com/Charleschtsoi/dimgaai
 
-## Features
+## Quick start (local CLI — Phase 1)
 
-- WebSocket mic capture → Deepgram streaming ASR (`zh-HK`)
-- Live transcript with speaker diarization
-- LLM claim detection (Cantonese + English code-mixing)
-- RAG fact-check against uploaded PDFs (TRUE / FALSE / UNCERTAIN)
-- Optional Tavily web search fallback
-- Traditional Chinese follow-up questions
-- Export meeting summary as Markdown or PDF
+No Docker or cloud hosting required for local use.
 
-## Quick start
+### 1. One-time setup
 
-### 1. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env with your API keys, or use the in-app BYOK settings panel
+```powershell
+cd meeting-support
+.\scripts\dimgaai.ps1 init
 ```
 
-Required keys:
-- `DEEPGRAM_API_KEY` — live transcription
-- `OPENAI_API_KEY` — LLM + embeddings (or Anthropic + OpenAI for embeddings)
+Edit `.env` and add your API keys (or use BYOK in the browser later):
 
-Optional:
-- `TAVILY_API_KEY` — web search fallback
+```
+DEEPGRAM_API_KEY=...
+OPENAI_API_KEY=...
+```
 
-### 2. Run backend
+Install [ffmpeg](https://ffmpeg.org/) for mic transcription (`choco install ffmpeg` on Windows).
+
+Install [Node.js](https://nodejs.org/) for the frontend.
+
+### 2. Check prerequisites
+
+```powershell
+.\scripts\dimgaai.ps1 doctor
+```
+
+### 3. Start the app
+
+```powershell
+.\scripts\dimgaai.ps1 dev
+```
+
+Opens **http://localhost:5173** — tap **🎙️ 開始錄音** and allow the microphone.
+
+### CLI commands
+
+| Command | Description |
+|---------|-------------|
+| `dimgaai init` | Create `.env`, install Python deps |
+| `dimgaai doctor` | Check Python, ffmpeg, Node, ports, keys |
+| `dimgaai dev` | Backend + Vite dev server (port 5173) |
+| `dimgaai start` | Build frontend, single server on port 8000 |
+| `dimgaai stop` | Stop background processes |
+| `dimgaai test` | Run automated checklist |
+| `dimgaai share` | Public HTTPS URL via Cloudflare Tunnel (optional) |
+
+**Windows:** `.\scripts\dimgaai.ps1 <command>` or `scripts\dimgaai.bat dev`
+
+**Mac/Linux:** `./scripts/dimgaai.sh dev`
+
+**Global install (optional):**
 
 ```bash
 cd backend
-python -m venv .venv
-.venv\Scripts\activate        # Windows
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+pip install -e .
+dimgaai dev
 ```
 
-### 3. Run frontend
+### Optional: share a public demo link
 
-```bash
+```powershell
+# Install cloudflared first
+.\scripts\dimgaai.ps1 share
+```
+
+Prints a temporary `https://….trycloudflare.com` URL. Your PC must stay on.
+
+---
+
+## For Users
+
+1. Run `dimgaai dev` (or open a deployed URL in phase 2)
+2. **Upload reference PDFs before recording** (improves ASR + fact-checking)
+3. Tap **🎙️ 開始錄音** and allow microphone access
+4. View live transcript (raw ASR + corrected text) and verdict cards
+5. Export report when done
+
+---
+
+## Transcript pipeline (Cantonese accuracy)
+
+Spoken Cantonese is handled in layers — not a single translation step:
+
+```
+Mic (webm) → ffmpeg (PCM 16 kHz) → Deepgram nova-2 zh-HK
+  → segment batching → ASR-aware LLM normalizer (書面語)
+  → claim detector (raw + corrected + context)
+  → RAG fact-check → follow-up questions
+```
+
+**Tips for better transcripts:**
+
+| Tip | Why |
+|-----|-----|
+| Upload PDFs **before** recording | Extracts a glossary; boosts Deepgram keywords for domain terms |
+| Use a headset in a quiet room | Biggest real-world ASR improvement |
+| Speak in full phrases | Batcher + `utterance_end_ms` produce better finals |
+| Check `raw_text` vs corrected `text` in UI | Numbers/names may be clearer in raw ASR |
+
+**What the LLM receives for fact-check / questions:**
+
+- ASR raw text (recover numbers if correction is wrong)
+- Corrected Traditional Chinese transcript
+- Recent conversation context (last few segments)
+- Meeting glossary from uploaded PDFs
+- Fact-check verdict (when a claim is detected)
+
+---
+
+## Phase 2 (planned): Docker + public web deploy
+
+- `docker compose up --build` — single container on port 8000
+- Railway / Northflank / VPS hosting
+- See `Dockerfile` and `docker-compose.yml` (already in repo)
+
+---
+
+## Manual dev (without CLI)
+
+```powershell
+# Terminal 1
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+
+# Terminal 2
 cd frontend
 npm install
 npm run dev
@@ -54,59 +142,50 @@ npm run dev
 
 Open http://localhost:5173
 
-### Docker
+---
 
-```bash
-docker compose up --build
+## Verify
+
+```powershell
+.\scripts\dimgaai.ps1 test
 ```
 
-## Usage
+## Features
 
-1. Click **API 設定 (BYOK)** and enter your keys (or set them in `.env`)
-2. Upload one or more reference PDFs
-3. Click **開始錄音** and speak in Cantonese (code-mixing supported)
-4. View live transcript (left) and verdicts + questions (right)
-5. Export Markdown or PDF when done
+- MediaRecorder webm → Deepgram zh-HK streaming ASR with diarization
+- PDF glossary extraction → Deepgram keyword boosting
+- Post-ASR Traditional Chinese normalization (context + glossary aware)
+- LLM claim detection (Cantonese + English code-mixing, dual raw/corrected input)
+- RAG fact-check (TRUE / FALSE / UNCERTAIN) with optional Tavily fallback
+- Follow-up questions every ~30s or on claim detection (includes verdict context)
+- BYOK API keys via in-app settings
+- Export Markdown / PDF with duration, participants, claim count
+- Mobile-first UI, PWA, WebSocket auto-reconnect
 
-## Demo acceptance criteria
-
-Run the demo script after starting the backend:
-
-```bash
-cd backend
-python scripts/demo_checklist.py
-```
-
-Manual demo:
-1. Upload reference PDFs containing verifiable facts
-2. Speak or play ~2 min Cantonese audio with at least one factual claim
-3. Verify: live transcript, ≥1 verdict within 5s, ≥1 TC question, no crash on code-mix
-4. Export report
-
-## API endpoints
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
-| POST | `/session/{id}/configure` | Configure BYOK keys |
-| POST | `/documents` | Upload PDFs (multipart) |
-| GET | `/export/{id}?format=md\|pdf` | Export meeting report |
-| WS | `/ws/meeting/{id}` | Audio stream + events |
-
-## WebSocket events (server → client)
-
-```json
-{"type":"transcript","speaker":0,"text":"...","is_final":true}
-{"type":"verdict","claim":"...","verdict":"TRUE","confidence":0.9,"rationale":"...","sources":[],"latency_ms":2800}
-{"type":"questions","segment":"...","questions":["..."]}
-```
+| POST | `/session/{id}/configure` | BYOK keys |
+| POST | `/documents` | Upload PDFs |
+| GET | `/export/{id}?format=md\|pdf` | Export report |
+| WS | `/ws/meeting/{id}` | Audio + events |
 
 ## Project structure
 
 ```
 meeting-support/
-├── backend/app/          # FastAPI application
-├── frontend/src/         # React UI
-├── docker-compose.yml
-└── .env.example
+├── backend/
+│   ├── app/              # FastAPI, WebSocket, ASR, RAG, export
+│   ├── dimgaai_cli/      # Local CLI (init, doctor, dev, start, stop)
+│   └── scripts/          # demo_checklist.py
+├── frontend/             # React + Vite + Tailwind
+├── scripts/              # dimgaai.ps1 / .bat / .sh wrappers
+├── Dockerfile            # Phase 2 single-unit deploy
+└── docker-compose.yml
 ```
+
+## License
+
+MIT
