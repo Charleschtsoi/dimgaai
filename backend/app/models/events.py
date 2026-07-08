@@ -20,13 +20,18 @@ class SessionConfig(BaseModel):
     llm_api_key: str | None = None
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
+    google_api_key: str | None = None
+    embedding_provider: str = "openai"
     tavily_api_key: str | None = None
 
     def normalized(self) -> "SessionConfig":
         data = self.model_copy()
         if data.llm_api_key:
-            if data.llm_provider.lower() == "anthropic":
+            provider = data.llm_provider.lower()
+            if provider == "anthropic":
                 data.anthropic_api_key = data.llm_api_key
+            elif provider == "gemini":
+                data.google_api_key = data.llm_api_key
             else:
                 data.openai_api_key = data.llm_api_key
         return data

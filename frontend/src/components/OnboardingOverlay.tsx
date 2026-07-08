@@ -1,31 +1,25 @@
 interface OnboardingOverlayProps {
   step: number;
-  onNext: () => void;
+  onNext?: () => void;
   onSkip: () => void;
   onOpenSettings: () => void;
 }
 
 const STEPS = [
   {
-    title: "步驟 1：輸入 API 金鑰",
-    body: "按「API 設定」輸入 Deepgram 及 LLM 金鑰。如伺服器已設定 .env，可跳過。",
+    title: "步驟 1：設定 2 把 API 金鑰",
+    body: "即時會議需要兩類 API：\n\n• Deepgram — 麥克風轉錄（粵語）\n• Google Gemini（推薦）— 分析、核查、問題\n\n按「開啟設定」選擇方案並輸入金鑰。如已在 .env 設定，可跳過。",
     action: "settings" as const,
   },
   {
-    title: "步驟 2：上傳參考文件（可選）",
-    body: "拖放 PDF 到上傳區，以便核查會議中的事實陳述。",
-    action: "next" as const,
-  },
-  {
-    title: "步驟 3：開始錄音",
-    body: "撳「開始錄音」，瀏覽器會要求麥克風權限。請撳「允許」開始錄音。",
+    title: "步驟 2：開始錄音",
+    body: "（可選）先上傳 PDF 參考文件。然後撳「開始錄音」並允許麥克風權限。",
     action: "done" as const,
   },
 ];
 
 export function OnboardingOverlay({
   step,
-  onNext,
   onSkip,
   onOpenSettings,
 }: OnboardingOverlayProps) {
@@ -41,7 +35,9 @@ export function OnboardingOverlay({
         <h2 className="mb-2 text-lg font-semibold text-slate-900">
           {current.title}
         </h2>
-        <p className="mb-6 text-sm text-slate-600">{current.body}</p>
+        <p className="mb-6 whitespace-pre-line text-sm text-slate-600">
+          {current.body}
+        </p>
         <div className="flex justify-between gap-2">
           <button
             type="button"
@@ -54,16 +50,11 @@ export function OnboardingOverlay({
             type="button"
             onClick={() => {
               if (current.action === "settings") onOpenSettings();
-              else if (current.action === "done") onSkip();
-              else onNext();
+              else onSkip();
             }}
             className="min-h-11 rounded-lg bg-teal-600 px-6 text-sm font-medium text-white hover:bg-teal-700"
           >
-            {current.action === "settings"
-              ? "開啟設定"
-              : current.action === "done"
-                ? "明白了"
-                : "下一步"}
+            {current.action === "settings" ? "開啟設定" : "明白了，開始"}
           </button>
         </div>
       </div>

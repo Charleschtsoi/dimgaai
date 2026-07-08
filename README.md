@@ -7,85 +7,160 @@ Real-time Cantonese meeting assistant: live transcription, fact-check verdicts, 
 
 Repo: https://github.com/Charleschtsoi/dimgaai
 
-## Quick start (local CLI — Phase 1)
+---
 
-No Docker or cloud hosting required for local use.
+## Before you start — what you need
 
-### 1. One-time setup
+| Requirement | Required? | Notes |
+|-------------|-----------|-------|
+| **Python 3.11+** | Yes | [Download Python](https://www.python.org/downloads/). On Windows, tick “Add to PATH” during install if allowed. |
+| **Node.js installed** | **No** | First run downloads a portable copy into `.tools/` (no admin). After the UI is built once, only Python is needed. |
+| **Admin / IT install rights** | **No** | `dimgaai go` works on locked-down PCs. Ignore winget errors — portable tools are used instead. |
+| **Internet** | First run only | Downloads portable Node, ffmpeg, and Python packages (~2–5 min one-time build). |
+| **Microphone** | Yes | Browser will ask for permission when you start recording. |
+| **API keys** | Yes (2 recommended) | See [API keys](#api-keys-2-minimum) below. Free tiers exist on Deepgram and Google AI Studio. |
 
-```powershell
-cd meeting-support
-.\scripts\dimgaai.ps1 init
-```
+### API keys (2 minimum)
 
-Edit `.env` and add your API keys (or use BYOK in the browser later):
+Live meetings need **two different services** — one for the microphone, one for reasoning:
 
-```
-DEEPGRAM_API_KEY=...
-OPENAI_API_KEY=...
-```
+| Key | Sign up | Used for |
+|-----|---------|----------|
+| **Deepgram** | [console.deepgram.com](https://console.deepgram.com/) | Live Cantonese speech-to-text (`zh-HK`) |
+| **Google Gemini** *(recommended)* | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Transcript cleanup, claim detection, fact-check, questions |
 
-Install [ffmpeg](https://ffmpeg.org/) for mic transcription (`choco install ffmpeg` on Windows).
+**Alternative LLM stacks** (still need Deepgram for the mic):
 
-Install [Node.js](https://nodejs.org/) for the frontend.
+| Stack | Keys needed |
+|-------|-------------|
+| **Gemini** *(recommended)* | Deepgram + Google (one Google key for chat + PDF embeddings) |
+| OpenAI | Deepgram + OpenAI |
+| Anthropic | Deepgram + Anthropic + Google or OpenAI (embeddings only) |
 
-### 2. Check prerequisites
+> Claude cannot replace Deepgram for live mic transcription. Gemini file/batch audio is not real-time. See [Why two APIs?](#why-two-apis) for details.
 
-```powershell
-.\scripts\dimgaai.ps1 doctor
-```
-
-### 3. Start the app
-
-```powershell
-.\scripts\dimgaai.ps1 dev
-```
-
-Opens **http://localhost:5173** — tap **🎙️ 開始錄音** and allow the microphone.
-
-### CLI commands
-
-| Command | Description |
-|---------|-------------|
-| `dimgaai init` | Create `.env`, install Python deps |
-| `dimgaai doctor` | Check Python, ffmpeg, Node, ports, keys |
-| `dimgaai dev` | Backend + Vite dev server (port 5173) |
-| `dimgaai start` | Build frontend, single server on port 8000 |
-| `dimgaai stop` | Stop background processes |
-| `dimgaai test` | Run automated checklist |
-| `dimgaai share` | Public HTTPS URL via Cloudflare Tunnel (optional) |
-
-**Windows:** `.\scripts\dimgaai.ps1 <command>` or `scripts\dimgaai.bat dev`
-
-**Mac/Linux:** `./scripts/dimgaai.sh dev`
-
-**Global install (optional):**
-
-```bash
-cd backend
-pip install -r requirements.txt
-pip install -e .
-dimgaai dev
-```
-
-### Optional: share a public demo link
-
-```powershell
-# Install cloudflared first
-.\scripts\dimgaai.ps1 share
-```
-
-Prints a temporary `https://….trycloudflare.com` URL. Your PC must stay on.
+**Optional:** [Tavily](https://tavily.com/) for web-search fallback during fact-checking.
 
 ---
 
-## For Users
+## Quick start (2 steps)
 
-1. Run `dimgaai dev` (or open a deployed URL in phase 2)
-2. **Upload reference PDFs before recording** (improves ASR + fact-checking)
-3. Tap **🎙️ 開始錄音** and allow microphone access
+### Step 1 — Run one command
+
+From the repo root (or `backend\`):
+
+```powershell
+.\scripts\dimgaai.ps1 go
+```
+
+**Mac/Linux:**
+
+```bash
+./scripts/dimgaai.sh go
+```
+
+`dimgaai go` will automatically:
+
+1. Create `.env` if missing and install Python dependencies
+2. Prompt for API keys (press **Enter** to skip — you can enter them in the browser later)
+3. Download **portable Node.js** and **ffmpeg** into `.tools/` if not already present (no installer, no admin)
+4. Build the frontend on first run (~2–5 min, internet required once)
+5. Free ports 8000 / 5173 if busy
+6. Start the app and open **http://localhost:8000**
+
+> **First run vs later runs:** The first `go` needs internet to download tools and build the UI. After that, only Python is required — the app serves a pre-built UI on port **8000** with no system Node install.
+
+### Step 2 — In the browser
+
+1. Open **Settings** (API) if you skipped keys during setup — choose the **Gemini** preset and paste your 2 keys
+2. **Upload reference PDFs** before recording (optional but improves accuracy)
+3. Tap **Start recording** and allow microphone access
+
+That's it.
+
+---
+
+## Entering or changing API keys
+
+| Method | Command / action |
+|--------|------------------|
+| CLI wizard | `.\scripts\dimgaai.ps1 setup` |
+| Skip wizard, use browser | `.\scripts\dimgaai.ps1 go --skip-keys` then open Settings in the UI |
+| `.env` file | Copy `.env.example` → `.env` and fill in keys manually |
+
+Example `.env` (Gemini stack — recommended):
+
+```env
+DEEPGRAM_API_KEY=your_deepgram_key
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=your_google_key
+```
+
+Google AI Studio keys usually start with `AIza...`. Keep keys private — never commit `.env`.
+
+---
+
+## No admin rights? (locked-down PC)
+
+You do **not** need IT to install Node.js or ffmpeg.
+
+1. Run `dimgaai go` once — portable tools land in `.tools/` inside the project folder
+2. If winget fails with “Failed when opening source(s)”, **ignore it** — portable download continues automatically
+3. After the first build, run `dimgaai go` anytime with **Python only**
+4. Check status: `.\scripts\dimgaai.ps1 doctor` (hints do not block `go`)
+
+**Troubleshooting**
+
+| Problem | Fix |
+|---------|-----|
+| `python` not found | Use full path, e.g. `%LOCALAPPDATA%\Programs\Python\Python312\python.exe`, or install Python 3.11+ |
+| Port 8000 in use | `.\scripts\dimgaai.ps1 stop` then retry `go` |
+| ffmpeg missing (mic) | `go` downloads portable ffmpeg; or ask IT — mic will not work without it |
+| Build failed | Check internet, delete `frontend\node_modules`, run `go` again |
+| Keys deleted from `.env` | Run `setup` or re-enter in browser Settings |
+
+---
+
+## Why two APIs?
+
+Live Cantonese meetings need **two different jobs**:
+
+| Job | API | Why not one LLM only? |
+|-----|-----|------------------------|
+| **Microphone transcript** | Deepgram (`zh-HK`) | Specialized streaming ASR with diarization |
+| **Analysis / fact-check / questions** | One LLM (Gemini, OpenAI, or Anthropic) | Reasoning over text |
+
+Claude has no speech-to-text. Gemini batch/file audio is not real-time. A Gemini-only transcript path would require the Gemini Live API (future work, not in phase 1).
+
+---
+
+## CLI commands
+
+| Command | Description |
+|---------|-------------|
+| `dimgaai go` | **Recommended** — setup, build, and start in one flow |
+| `dimgaai setup` | Interactive API key wizard only |
+| `dimgaai init` | Create `.env` + pip install only |
+| `dimgaai doctor` | Check status (hints don't block `go`) |
+| `dimgaai dev` | Dev mode on port 5173 (needs npm) |
+| `dimgaai start` | Production server on port 8000 |
+| `dimgaai stop` | Stop processes + free ports |
+| `dimgaai test` | Run automated checklist |
+| `dimgaai share` | Public HTTPS URL via Cloudflare Tunnel |
+
+**Windows:** `.\scripts\dimgaai.ps1 <command>` from repo root or `backend\`
+
+**Mac/Linux:** `./scripts/dimgaai.sh <command>`
+
+---
+
+## Using the app
+
+1. Run `dimgaai go` (or open a deployed URL in phase 2)
+2. Upload reference PDFs **before** recording
+3. Start recording and allow microphone access
 4. View live transcript (raw ASR + corrected text) and verdict cards
-5. Export report when done
+5. Export Markdown / PDF when done
 
 ---
 
@@ -108,14 +183,6 @@ Mic (webm) → ffmpeg (PCM 16 kHz) → Deepgram nova-2 zh-HK
 | Use a headset in a quiet room | Biggest real-world ASR improvement |
 | Speak in full phrases | Batcher + `utterance_end_ms` produce better finals |
 | Check `raw_text` vs corrected `text` in UI | Numbers/names may be clearer in raw ASR |
-
-**What the LLM receives for fact-check / questions:**
-
-- ASR raw text (recover numbers if correction is wrong)
-- Corrected Traditional Chinese transcript
-- Recent conversation context (last few segments)
-- Meeting glossary from uploaded PDFs
-- Fact-check verdict (when a claim is detected)
 
 ---
 
@@ -157,10 +224,11 @@ Open http://localhost:5173
 - Post-ASR Traditional Chinese normalization (context + glossary aware)
 - LLM claim detection (Cantonese + English code-mixing, dual raw/corrected input)
 - RAG fact-check (TRUE / FALSE / UNCERTAIN) with optional Tavily fallback
-- Follow-up questions every ~30s or on claim detection (includes verdict context)
-- BYOK API keys via in-app settings
+- Follow-up questions every ~30s or on claim detection
+- LLM providers: **OpenAI**, **Anthropic**, or **Google Gemini** (BYOK — stack presets in Settings)
 - Export Markdown / PDF with duration, participants, claim count
 - Mobile-first UI, PWA, WebSocket auto-reconnect
+- Portable Node/ffmpeg for PCs without admin rights
 
 ## API
 
@@ -178,10 +246,11 @@ Open http://localhost:5173
 meeting-support/
 ├── backend/
 │   ├── app/              # FastAPI, WebSocket, ASR, RAG, export
-│   ├── dimgaai_cli/      # Local CLI (init, doctor, dev, start, stop)
-│   └── scripts/          # demo_checklist.py
+│   ├── dimgaai_cli/      # Local CLI (go, setup, doctor, portable tools)
+│   └── scripts/          # demo_checklist.py, launcher scripts
 ├── frontend/             # React + Vite + Tailwind
 ├── scripts/              # dimgaai.ps1 / .bat / .sh wrappers
+├── .tools/               # Portable Node + ffmpeg (auto-created, gitignored)
 ├── Dockerfile            # Phase 2 single-unit deploy
 └── docker-compose.yml
 ```

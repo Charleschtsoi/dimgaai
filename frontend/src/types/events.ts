@@ -68,11 +68,16 @@ export interface TranscriptLine {
   isFactualClaim: boolean;
 }
 
+export type LlmProvider = "openai" | "anthropic" | "gemini";
+export type EmbeddingProvider = "openai" | "google";
+
 export interface SessionConfig {
   deepgram_api_key?: string;
-  llm_provider: "openai" | "anthropic";
+  llm_provider: LlmProvider;
   llm_api_key?: string;
+  embedding_provider?: EmbeddingProvider;
   openai_api_key?: string;
   anthropic_api_key?: string;
+  google_api_key?: string;
   tavily_api_key?: string;
 }

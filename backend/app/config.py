@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    google_api_key: str = ""
     tavily_api_key: str = ""
 
     chroma_persist_dir: str = "./data/chroma"
@@ -28,6 +29,9 @@ class Settings(BaseSettings):
     rag_similarity_threshold: float = 0.55
     openai_model: str = "gpt-4o-mini"
     anthropic_model: str = "claude-3-5-haiku-latest"
+    embedding_provider: str = "openai"
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_embedding_model: str = "models/text-embedding-004"
     embedding_model: str = "text-embedding-3-small"
 
     @property

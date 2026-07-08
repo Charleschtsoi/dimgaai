@@ -24,12 +24,13 @@ export default function App() {
   const [sessionId] = useState(createSessionId);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [tutorialSeen, setTutorialSeen] = useState(false);
-  const [engagementCount, setEngagementCount] = useState(0);
+  const [, setEngagementCount] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const [config, setConfig] = useState<SessionConfig>({
-    llm_provider: "openai",
+    llm_provider: "gemini",
+    embedding_provider: "google",
   });
   const [configError, setConfigError] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
@@ -106,9 +107,19 @@ export default function App() {
       openai_api_key:
         config.llm_provider === "openai"
           ? config.llm_api_key
-          : config.openai_api_key,
+          : config.llm_provider === "anthropic" &&
+              config.embedding_provider === "openai"
+            ? config.openai_api_key
+            : config.openai_api_key,
       anthropic_api_key:
         config.llm_provider === "anthropic" ? config.llm_api_key : undefined,
+      google_api_key:
+        config.llm_provider === "gemini"
+          ? config.llm_api_key
+          : config.llm_provider === "anthropic" &&
+              (config.embedding_provider ?? "google") === "google"
+            ? config.google_api_key
+            : config.google_api_key,
     };
     try {
       const res = await fetch(`/session/${sessionId}/configure`, {

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 from dimgaai_cli.paths import BACKEND, FRONTEND, clear_state, load_state, save_state
+from dimgaai_cli.prereqs import find_npm, free_port
 
 
 def _popen(cmd: list[str], cwd: Path, env: dict[str, str]) -> subprocess.Popen:
@@ -29,7 +29,7 @@ def start_dev(env: dict[str, str]) -> None:
         BACKEND,
         env,
     )
-    npm = shutil_which("npm")
+    npm = find_npm()
     if not npm:
         raise RuntimeError("npm not found")
     frontend = _popen([npm, "run", "dev"], FRONTEND, os.environ.copy())
@@ -68,6 +68,14 @@ def stop_all() -> list[int]:
     return stopped
 
 
+def prepare_ports() -> None:
+    """Stop tracked processes and free dev ports."""
+    stop_all()
+    for port in (8000, 5173):
+        free_port(port)
+    time.sleep(0.3)
+
+
 def _kill_pid(pid: int) -> bool:
     try:
         if sys.platform == "win32":
@@ -77,6 +85,8 @@ def _kill_pid(pid: int) -> bool:
                 capture_output=True,
             )
         else:
+            import signal
+
             os.killpg(os.getpgid(pid), signal.SIGTERM)
         return True
     except (ProcessLookupError, OSError, subprocess.SubprocessError):
@@ -96,9 +106,3 @@ def wait_for_health(url: str = "http://127.0.0.1:8000/health", timeout: float = 
         except (urllib.error.URLError, TimeoutError):
             time.sleep(0.5)
     return False
-
-
-def shutil_which(cmd: str) -> str | None:
-    import shutil
-
-    return shutil.which(cmd)

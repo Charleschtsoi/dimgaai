@@ -17,8 +17,17 @@ async def configure_session(session_id: str, config: SessionConfig):
     provider = ctx.resolve_llm_provider().lower()
     if provider == "anthropic" and not ctx.resolve_anthropic_key():
         missing.append("anthropic_api_key")
+    elif provider == "gemini" and not ctx.resolve_google_key():
+        missing.append("google_api_key")
     elif provider == "openai" and not ctx.resolve_openai_key():
         missing.append("openai_api_key")
+
+    if provider == "anthropic":
+        embed = ctx.resolve_embedding_provider().lower()
+        if embed == "google" and not ctx.resolve_google_key():
+            missing.append("google_api_key (embeddings)")
+        elif embed == "openai" and not ctx.resolve_openai_key():
+            missing.append("openai_api_key (embeddings)")
 
     if missing:
         raise HTTPException(

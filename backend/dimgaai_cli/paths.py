@@ -11,6 +11,7 @@ ENV_FILE = ROOT / ".env"
 ENV_EXAMPLE = ROOT / ".env.example"
 STATE_DIR = ROOT / ".dimgaai"
 STATE_FILE = STATE_DIR / "state.json"
+TOOLS_DIR = ROOT / ".tools"
 FRONTEND_DIST = FRONTEND / "dist"
 
 

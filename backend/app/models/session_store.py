@@ -41,6 +41,22 @@ class SessionContext:
             or settings.anthropic_api_key
         )
 
+    def resolve_google_key(self, settings: Settings | None = None) -> str:
+        settings = settings or get_settings()
+        if self.config.google_api_key:
+            return self.config.google_api_key
+        if (
+            self.resolve_llm_provider(settings) == "gemini"
+            and self.config.llm_api_key
+        ):
+            return self.config.llm_api_key
+        return settings.google_api_key
+
+    def resolve_embedding_provider(self, settings: Settings | None = None) -> str:
+        settings = settings or get_settings()
+        raw = self.config.embedding_provider or settings.embedding_provider
+        return raw.lower() if raw else "openai"
+
     def resolve_tavily_key(self, settings: Settings | None = None) -> str:
         settings = settings or get_settings()
         return self.config.tavily_api_key or settings.tavily_api_key

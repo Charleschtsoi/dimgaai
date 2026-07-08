@@ -15,6 +15,7 @@ env/
 data/
 *.db
 .dimgaai/state.json
+.tools/
 
 # Build
 frontend/dist/

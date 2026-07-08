@@ -13,11 +13,14 @@ sys.path.insert(0, str(ROOT / "backend"))
 CHECKS = [
     ("FastAPI app", "app.main:app"),
     ("dimgaai CLI", "dimgaai_cli.main"),
+    ("CLI prereqs", "dimgaai_cli.prereqs"),
+    ("CLI portable tools", "dimgaai_cli.portable_tools"),
     ("Audio decode (webm)", "app.services.audio_decode"),
     ("Transcript normalizer", "app.services.transcript_normalize"),
     ("Meeting glossary", "app.services.meeting_glossary"),
     ("Deepgram stream", "app.services.deepgram_stream"),
     ("Claim detector", "app.services.claim_detector"),
+    ("LLM provider (Gemini)", "langchain_google_genai"),
     ("RAG fact checker", "app.services.rag_factcheck"),
     ("Question generator", "app.services.question_gen"),
     ("Export service", "app.services.export"),
@@ -117,7 +120,7 @@ def main() -> int:
             print("  [OK] All event shapes valid")
 
     print("\nManual acceptance criteria:")
-    print("  1. dimgaai init && dimgaai doctor && dimgaai dev")
+    print("  1. dimgaai go  (or: init && doctor && dev)")
     print("  2. Upload PDF -> record 2 min Cantonese with 1 factual claim")
     print("  3. >=1 verdict <5s, >=1 TC question, code-mix OK")
     print("  4. Export Markdown includes duration, participants, claims")
