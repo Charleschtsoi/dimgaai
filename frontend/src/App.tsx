@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { ExportButton } from "./components/ExportButton";
 import { OnboardingOverlay } from "./components/OnboardingOverlay";
@@ -18,6 +18,20 @@ import type {
 
 function createSessionId() {
   return crypto.randomUUID();
+}
+
+function configStorageKey(sessionId: string) {
+  return `dimgaai-config-${sessionId}`;
+}
+
+function loadStoredConfig(sessionId: string): Partial<SessionConfig> | null {
+  try {
+    const raw = sessionStorage.getItem(configStorageKey(sessionId));
+    if (!raw) return null;
+    return JSON.parse(raw) as SessionConfig;
+  } catch {
+    return null;
+  }
 }
 
 export default function App() {
@@ -40,6 +54,15 @@ export default function App() {
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [verdicts, setVerdicts] = useState<VerdictEvent[]>([]);
   const [questions, setQuestions] = useState<QuestionsEvent[]>([]);
+
+  useEffect(() => {
+    const stored = loadStoredConfig(sessionId);
+    if (!stored) return;
+    setConfig((prev) => ({ ...prev, ...stored }));
+    if (stored.deepgram_api_key?.trim() && stored.llm_api_key?.trim()) {
+      setTutorialSeen(true);
+    }
+  }, [sessionId]);
 
   const handleEvent = useCallback((event: ServerEvent) => {
     if (event.type === "transcript") {
@@ -134,6 +157,7 @@ export default function App() {
           typeof err.detail === "string" ? err.detail : "設定失敗",
         );
       }
+      sessionStorage.setItem(configStorageKey(sessionId), JSON.stringify(config));
     } catch (e) {
       setConfigError(e instanceof Error ? e.message : "設定失敗");
       throw e;
