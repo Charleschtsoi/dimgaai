@@ -43,40 +43,147 @@ Live meetings need **two different services** — one for the microphone, one fo
 
 ---
 
-## Quick start (2 steps)
+## Step-by-step guide (first time)
 
-### Step 1 — Run one command
+Follow these steps in order. Total setup time: ~10 minutes (mostly first-run download).
 
-From the repo root (or `backend\`):
+### Step 1 — Get your 2 API keys
+
+You need two free-tier accounts:
+
+| # | Service | Where to sign up | What to copy |
+|---|---------|------------------|--------------|
+| 1 | **Deepgram** | [console.deepgram.com](https://console.deepgram.com/) | API key (for live Cantonese mic) |
+| 2 | **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | API key starting with `AIza...` |
+
+Keep both keys handy — you will paste them in the browser in Step 4.
+
+> **Why two keys?** Deepgram handles live microphone transcription; Gemini handles analysis, fact-checking, and follow-up questions. See [Why two APIs?](#why-two-apis).
+
+---
+
+### Step 2 — Install Python (if needed)
+
+1. Download **Python 3.11 or 3.12** from [python.org](https://www.python.org/downloads/)
+2. Run the installer
+3. If your IT policy allows, tick **“Add python.exe to PATH”**
+4. Verify in PowerShell:
+   ```powershell
+   python --version
+   ```
+   If `python` is not found, use the full path (common on locked-down PCs):
+   ```
+   %LOCALAPPDATA%\Programs\Python\Python312\python.exe
+   ```
+
+You do **not** need Node.js installed separately — the app downloads a portable copy on first run.
+
+---
+
+### Step 3 — Start the app
+
+Open PowerShell, go to the project folder, and run:
 
 ```powershell
+cd "D:\path\to\meeting-support"
 .\scripts\dimgaai.ps1 go
 ```
 
-**Mac/Linux:**
+**What happens:**
 
-```bash
-./scripts/dimgaai.sh go
+| Phase | What you see | Time |
+|-------|----------------|------|
+| First run | Downloads portable tools + builds UI | ~2–5 min |
+| Every run | Starts server, opens browser | ~10 sec |
+
+Your browser should open **http://localhost:8000** automatically.
+
+**If winget shows an error** — ignore it. Portable tools download into `.tools/` without admin rights.
+
+**To stop the app later:**
+```powershell
+.\scripts\dimgaai.ps1 stop
 ```
 
-`dimgaai go` will automatically:
+---
 
-1. Create `.env` if missing and install Python dependencies
-2. Prompt for API keys (press **Enter** to skip — you can enter them in the browser later)
-3. Download **portable Node.js** and **ffmpeg** into `.tools/` if not already present (no installer, no admin)
-4. Build the frontend on first run (~2–5 min, internet required once)
-5. Free ports 8000 / 5173 if busy
-6. Start the app and open **http://localhost:8000**
+### Step 4 — Enter API keys in the browser
 
-> **First run vs later runs:** The first `go` needs internet to download tools and build the UI. After that, only Python is required — the app serves a pre-built UI on port **8000** with no system Node install.
+1. On first visit, an **onboarding overlay** appears
+2. Tap **「開啟設定」** (Open Settings), or click **⚙️ API 設定** in the top bar
+3. Under **方案**, keep **Google Gemini（推薦 — 2 把金鑰）** selected
+4. Paste your keys:
+   - **Deepgram API Key** → from Step 1
+   - **Google Gemini API Key** → from Step 1
+5. Tap **「儲存」** (Save)
+6. Confirm the banner shows **已設定 2/2 把必需金鑰**
 
-### Step 2 — In the browser
+Keys are stored for this session only — they are not sent to our servers.
 
-1. Open **Settings** (API) if you skipped keys during setup — choose the **Gemini** preset and paste your 2 keys
-2. **Upload reference PDFs** before recording (optional but improves accuracy)
-3. Tap **Start recording** and allow microphone access
+---
 
-That's it.
+### Step 5 — (Optional) Upload reference PDFs
+
+Before recording, you can upload PDFs to improve accuracy:
+
+1. Drag PDF files into **「上傳參考文件」** at the top
+2. Wait until the header shows **「N 份參考文件已索引」**
+
+This helps with domain-specific terms and fact-checking against your documents.
+
+---
+
+### Step 6 — Start recording
+
+1. Click the green **「🎙️ 開始錄音」** button
+2. When the browser asks, click **Allow** for microphone access
+3. Wait until the status badge turns green: **「已連線」** (Connected)
+4. Speak in Cantonese (or Cantonese mixed with English)
+
+**Within a few seconds**, your speech should appear in the **「即時轉錄」** panel on the left.
+
+| Status badge | Meaning |
+|--------------|---------|
+| 未連線 | Not recording / not connected |
+| 連線中… | Connecting to transcription service |
+| **已連線** | Ready — speak now |
+| 連線錯誤 | Something failed — see red message below button |
+
+---
+
+### Step 7 — Use the results
+
+While recording:
+
+| Panel | What it shows |
+|-------|----------------|
+| **即時轉錄** (left) | Live Cantonese transcript with speaker labels |
+| **核查結果 & 追問** (right) | Fact-check verdicts (TRUE / FALSE / UNCERTAIN) and follow-up questions |
+
+When a factual claim is detected, the app checks it against your uploaded PDFs (if any).
+
+---
+
+### Step 8 — Stop and export
+
+1. Click **「⏹ 停止錄音」** when finished
+2. Click **「匯出報告」** to download Markdown or PDF
+3. To run another meeting: `.\scripts\dimgaai.ps1 go` again
+
+---
+
+## Quick reference (returning users)
+
+```powershell
+.\scripts\dimgaai.ps1 go      # start app + open browser
+.\scripts\dimgaai.ps1 stop     # stop server
+.\scripts\dimgaai.ps1 doctor   # check status
+```
+
+1. Open http://localhost:8000
+2. Enter keys in **API 設定** if not already saved
+3. **開始錄音** → wait for **已連線** → speak
+4. **停止錄音** → **匯出報告**
 
 ---
 
@@ -84,8 +191,8 @@ That's it.
 
 | Method | Command / action |
 |--------|------------------|
-| CLI wizard | `.\scripts\dimgaai.ps1 setup` |
-| Skip wizard, use browser | `.\scripts\dimgaai.ps1 go --skip-keys` then open Settings in the UI |
+| **Browser (default)** | Run `go` — onboarding opens Settings to paste keys |
+| CLI wizard (optional) | `.\scripts\dimgaai.ps1 setup` |
 | `.env` file | Copy `.env.example` → `.env` and fill in keys manually |
 
 Example `.env` (Gemini stack — recommended):
@@ -115,9 +222,12 @@ You do **not** need IT to install Node.js or ffmpeg.
 |---------|-----|
 | `python` not found | Use full path, e.g. `%LOCALAPPDATA%\Programs\Python\Python312\python.exe`, or install Python 3.11+ |
 | Port 8000 in use | `.\scripts\dimgaai.ps1 stop` then retry `go` |
-| ffmpeg missing (mic) | `go` downloads portable ffmpeg; or ask IT — mic will not work without it |
+| Status stays **未連線** | Open **API 設定**, paste both keys, tap **儲存**, then retry recording |
+| **已連線** but no transcript | Speak louder; use a headset; wait 3–5 seconds after connecting |
+| Red error under record button | Read the message — usually missing API key or invalid key |
 | Build failed | Check internet, delete `frontend\node_modules`, run `go` again |
-| Keys deleted from `.env` | Run `setup` or re-enter in browser Settings |
+| Keys deleted from `.env` | Re-enter in browser **API 設定** (no terminal prompt needed) |
+| Deepgram timeout error | Restart with `stop` then `go` — latest version sends WebM directly to Deepgram |
 
 ---
 
@@ -139,7 +249,7 @@ Claude has no speech-to-text. Gemini batch/file audio is not real-time. A Gemini
 | Command | Description |
 |---------|-------------|
 | `dimgaai go` | **Recommended** — setup, build, and start in one flow |
-| `dimgaai setup` | Interactive API key wizard only |
+| `dimgaai setup` | Optional CLI API key wizard (browser BYOK is default) |
 | `dimgaai init` | Create `.env` + pip install only |
 | `dimgaai doctor` | Check status (hints don't block `go`) |
 | `dimgaai dev` | Dev mode on port 5173 (needs npm) |
@@ -169,7 +279,7 @@ Claude has no speech-to-text. Gemini batch/file audio is not real-time. A Gemini
 Spoken Cantonese is handled in layers — not a single translation step:
 
 ```
-Mic (webm) → ffmpeg (PCM 16 kHz) → Deepgram nova-2 zh-HK
+Mic (webm/opus) → Deepgram nova-2 zh-HK (direct stream)
   → segment batching → ASR-aware LLM normalizer (書面語)
   → claim detector (raw + corrected + context)
   → RAG fact-check → follow-up questions
@@ -219,7 +329,7 @@ Open http://localhost:5173
 
 ## Features
 
-- MediaRecorder webm → Deepgram zh-HK streaming ASR with diarization
+- MediaRecorder webm/opus → Deepgram zh-HK streaming ASR (direct, no ffmpeg on live path)
 - PDF glossary extraction → Deepgram keyword boosting
 - Post-ASR Traditional Chinese normalization (context + glossary aware)
 - LLM claim detection (Cantonese + English code-mixing, dual raw/corrected input)

@@ -206,7 +206,7 @@ def init(
 
 @app.command()
 def setup():
-    """Interactive API key setup (or skip and use browser BYOK later)."""
+    """Interactive API key setup in the terminal (optional — browser BYOK is default)."""
     _ensure_backend_deps()
     run_setup_wizard(skip_if_configured=False)
     console.print("\n[bold]Next:[/bold] [cyan]dimgaai go[/cyan]")
@@ -236,14 +236,9 @@ def go(
         "--install-deps/--no-install-deps",
         help="Try winget install for Node.js + ffmpeg on Windows",
     ),
-    setup_keys: bool = typer.Option(
-        True,
-        "--setup-keys/--skip-keys",
-        help="Prompt for API keys if .env is empty",
-    ),
     open_browser: bool = typer.Option(True, "--open/--no-open"),
 ):
-    """One-command start: setup, free ports, install deps, launch app."""
+    """One-command start: free ports, install deps, launch app (API keys in browser)."""
     console.print(Panel("[bold]dimgaai go[/bold] — starting in one flow…", title="dimgaai"))
 
     if not ENV_FILE.exists():
@@ -252,9 +247,6 @@ def go(
             console.print(f"[green]Created[/green] {ENV_FILE}")
 
     _ensure_backend_deps()
-
-    if setup_keys:
-        run_setup_wizard(skip_if_configured=True)
 
     _maybe_install_deps(install_deps)
     refresh_tool_paths()

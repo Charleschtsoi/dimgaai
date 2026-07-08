@@ -5,12 +5,33 @@ import logging
 import shutil
 import subprocess
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 FRAME_WEBM = 0x01
 FRAME_PCM = 0x00
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
+@lru_cache
+def resolve_ffmpeg() -> str | None:
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    for candidate in (
+        _PROJECT_ROOT / ".tools" / "ffmpeg" / "bin" / "ffmpeg.exe",
+        _PROJECT_ROOT / ".tools" / "ffmpeg" / "bin" / "ffmpeg",
+    ):
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+def ffmpeg_available() -> bool:
+    return resolve_ffmpeg() is not None
 
 
 class WebmPcmDecoder:
@@ -19,7 +40,7 @@ class WebmPcmDecoder:
     def __init__(self) -> None:
         self._init_segment: bytes | None = None
         self._pending = bytearray()
-        self._ffmpeg = shutil.which("ffmpeg")
+        self._warned_missing_ffmpeg = False
 
     async def feed(self, chunk: bytes) -> list[bytes]:
         if not chunk:
@@ -54,15 +75,21 @@ class WebmPcmDecoder:
         return [pcm] if pcm else []
 
     def _decode_webm(self, webm_data: bytes) -> bytes | None:
-        if not self._ffmpeg:
-            logger.warning("ffmpeg not found; cannot decode webm audio")
+        ffmpeg = resolve_ffmpeg()
+        if not ffmpeg:
+            if not self._warned_missing_ffmpeg:
+                self._warned_missing_ffmpeg = True
+                logger.error(
+                    "ffmpeg not found; cannot decode webm audio. "
+                    "Run dimgaai go to download portable ffmpeg."
+                )
             return None
         with tempfile.TemporaryDirectory() as tmp:
             inp = Path(tmp) / "chunk.webm"
             out = Path(tmp) / "chunk.pcm"
             inp.write_bytes(webm_data)
             cmd = [
-                self._ffmpeg,
+                ffmpeg,
                 "-hide_banner",
                 "-loglevel",
                 "error",

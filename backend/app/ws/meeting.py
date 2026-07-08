@@ -11,7 +11,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.models.events import TranscriptSegment
 from app.models.session_store import session_store
-from app.services.audio_decode import WebmPcmDecoder
+from app.services.audio_decode import FRAME_PCM, FRAME_WEBM, WebmPcmDecoder, ffmpeg_available
 from app.services.claim_detector import ClaimDetector
 from app.services.deepgram_stream import DeepgramStream
 from app.services.question_gen import QuestionGenerator
@@ -50,10 +50,14 @@ async def meeting_websocket(websocket: WebSocket, session_id: str):
         await websocket.close(code=1008)
         return
 
+    if not ffmpeg_available():
+        logger.warning("ffmpeg not found; live webm passthrough will still work")
+
     outbound: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
     stream: DeepgramStream | None = None
     decoder = WebmPcmDecoder()
     batcher = SegmentBatcher()
+    audio_format = "webm"
 
     async def emit(payload: dict[str, Any]) -> None:
         await outbound.put(payload)
@@ -89,7 +93,12 @@ async def meeting_websocket(websocket: WebSocket, session_id: str):
     sender_task = asyncio.create_task(sender())
 
     try:
-        stream = DeepgramStream(deepgram_key, on_transcript, keywords=ctx.glossary)
+        stream = DeepgramStream(
+            deepgram_key,
+            on_transcript,
+            keywords=ctx.glossary,
+            audio_format=audio_format,
+        )
         await stream.start()
         await emit({"type": "status", "message": "connected"})
 
@@ -98,15 +107,27 @@ async def meeting_websocket(websocket: WebSocket, session_id: str):
             if message.get("type") == "websocket.disconnect":
                 break
             if "bytes" in message and message["bytes"]:
-                pcm_chunks = await decoder.feed(message["bytes"])
-                for pcm in pcm_chunks:
-                    await stream.send_audio(pcm)
+                raw = message["bytes"]
+                if raw and raw[0] == FRAME_WEBM:
+                    await stream.send_audio(raw[1:])
+                elif raw and raw[0] == FRAME_PCM:
+                    if audio_format != "pcm":
+                        audio_format = "pcm"
+                    await stream.send_audio(raw[1:])
+                elif audio_format == "webm":
+                    await stream.send_audio(raw)
+                else:
+                    pcm_chunks = await decoder.feed(raw)
+                    for pcm in pcm_chunks:
+                        await stream.send_audio(pcm)
             elif "text" in message and message["text"]:
                 try:
                     data = json.loads(message["text"])
                 except json.JSONDecodeError:
                     continue
-                if data.get("type") == "stop":
+                if data.get("type") == "audio_format":
+                    audio_format = str(data.get("format", "webm")).lower()
+                elif data.get("type") == "stop":
                     break
     except WebSocketDisconnect:
         logger.info("Client disconnected: %s", session_id)
@@ -116,8 +137,9 @@ async def meeting_websocket(websocket: WebSocket, session_id: str):
     finally:
         ctx.state.ended_at = datetime.now(timezone.utc)
         if stream:
-            for pcm in await decoder.flush():
-                await stream.send_audio(pcm)
+            if audio_format == "pcm":
+                for pcm in await decoder.flush():
+                    await stream.send_audio(pcm)
             await stream.finish()
         await outbound.put(None)
         await sender_task

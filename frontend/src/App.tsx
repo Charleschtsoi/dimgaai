@@ -92,10 +92,11 @@ export default function App() {
     }
   }, []);
 
-  const { status, error, connect, disconnect, sendAudio } = useMeetingSocket({
-    sessionId,
-    onEvent: handleEvent,
-  });
+  const { status, error, connectAndWait, disconnect, sendAudio } =
+    useMeetingSocket({
+      sessionId,
+      onEvent: handleEvent,
+    });
 
   const { isRecording, micError, start, stop } = useAudioCapture(sendAudio);
 
@@ -142,15 +143,23 @@ export default function App() {
   };
 
   const handleStart = async () => {
-    if (config.deepgram_api_key || config.llm_api_key) {
-      try {
-        await saveConfig();
-      } catch {
-        return;
-      }
+    if (!config.deepgram_api_key?.trim()) {
+      setConfigError("請先在 API 設定輸入 Deepgram 金鑰");
+      setSettingsOpen(true);
+      return;
     }
-    connect();
-    setTimeout(() => start(), 300);
+    if (!config.llm_api_key?.trim()) {
+      setConfigError("請先在 API 設定輸入 LLM 金鑰");
+      setSettingsOpen(true);
+      return;
+    }
+    try {
+      await saveConfig();
+      await connectAndWait();
+      await start();
+    } catch (e) {
+      setConfigError(e instanceof Error ? e.message : "無法開始錄音");
+    }
   };
 
   const handleStop = () => {
@@ -227,7 +236,7 @@ export default function App() {
         status={status}
         isRecording={isRecording}
         onToggleRecording={handleToggleRecording}
-        error={error || micError}
+        error={error || micError || configError}
       />
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,24rem)]">

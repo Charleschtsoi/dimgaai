@@ -36,6 +36,15 @@ def clear_state() -> None:
 
 def backend_env(extra: dict | None = None) -> dict[str, str]:
     env = os.environ.copy()
+    path = env.get("PATH", "")
+    for tool_dir in (
+        TOOLS_DIR / "node-v22.16.0-win-x64",
+        TOOLS_DIR / "ffmpeg" / "bin",
+    ):
+        tool_path = str(tool_dir)
+        if tool_dir.exists() and tool_path not in path:
+            path = f"{tool_path}{os.pathsep}{path}"
+    env["PATH"] = path
     env["PYTHONPATH"] = str(BACKEND)
     if extra:
         env.update(extra)

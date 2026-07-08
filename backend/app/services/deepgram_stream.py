@@ -20,10 +20,13 @@ class DeepgramStream:
         api_key: str,
         on_transcript: Callable[[TranscriptSegment], Awaitable[None]],
         keywords: list[str] | None = None,
+        *,
+        audio_format: str = "webm",
     ) -> None:
         self.api_key = api_key
         self.on_transcript = on_transcript
         self.keywords = keywords or []
+        self.audio_format = audio_format
         self._client = AsyncDeepgramClient(api_key=api_key)
         self._audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
         self._ready = asyncio.Event()
@@ -43,11 +46,18 @@ class DeepgramStream:
                 "punctuate": True,
                 "interim_results": True,
                 "smart_format": True,
-                "encoding": "linear16",
-                "sample_rate": 16000,
-                "channels": 1,
                 "utterance_end_ms": 1200,
             }
+            # Browser MediaRecorder sends containerized webm/opus — omit encoding
+            # so Deepgram reads sample rate from the container header.
+            if self.audio_format == "pcm":
+                connect_kwargs.update(
+                    {
+                        "encoding": "linear16",
+                        "sample_rate": 16000,
+                        "channels": 1,
+                    }
+                )
             if self.keywords:
                 connect_kwargs["keywords"] = [f"{term}:2" for term in self.keywords[:50]]
 
@@ -55,11 +65,13 @@ class DeepgramStream:
                 self._ready.set()
                 receiver = asyncio.create_task(self._receive(connection))
                 sender = asyncio.create_task(self._send_loop(connection))
+                keepalive = asyncio.create_task(self._keepalive_loop(connection))
                 await self._stop.wait()
                 await self._audio_queue.put(None)
                 sender.cancel()
                 receiver.cancel()
-                await asyncio.gather(sender, receiver, return_exceptions=True)
+                keepalive.cancel()
+                await asyncio.gather(sender, receiver, keepalive, return_exceptions=True)
                 await connection.send_close_stream()
         except Exception:
             logger.exception("Deepgram stream failed")
@@ -76,6 +88,18 @@ class DeepgramStream:
             pass
         except Exception:
             logger.exception("Deepgram receive loop failed")
+
+    async def _keepalive_loop(self, connection) -> None:
+        try:
+            while not self._stop.is_set():
+                await asyncio.sleep(4)
+                if self._stop.is_set():
+                    break
+                await connection.send_keep_alive()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.debug("Deepgram keepalive stopped", exc_info=True)
 
     async def _send_loop(self, connection) -> None:
         try:

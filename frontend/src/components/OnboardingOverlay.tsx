@@ -8,7 +8,7 @@ interface OnboardingOverlayProps {
 const STEPS = [
   {
     title: "步驟 1：設定 2 把 API 金鑰",
-    body: "即時會議需要兩類 API：\n\n• Deepgram — 麥克風轉錄（粵語）\n• Google Gemini（推薦）— 分析、核查、問題\n\n按「開啟設定」選擇方案並輸入金鑰。如已在 .env 設定，可跳過。",
+    body: "即時會議需要兩類 API：\n\n• Deepgram — 麥克風轉錄（粵語）\n• Google Gemini（推薦）— 分析、核查、問題\n\n按「開啟設定」選擇方案並輸入金鑰。",
     action: "settings" as const,
   },
   {
